@@ -1,8 +1,8 @@
 ## Interface: 11200
 ## Title: CleanBot Vanilla
-## Notes: Clean button UI to manage Playerbots on vanilla 1.12 (Turtle WoW).
+## Notes: Party-bot command center for vanilla 1.12 (Turtle WoW) via the .bot command.
 ## Author: B-Man-AltF4
-## Version: 0.1
+## Version: 0.2
 ## SavedVariables: CleanBotVDB
 
 Core.lua
