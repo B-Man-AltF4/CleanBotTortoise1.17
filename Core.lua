@@ -6,7 +6,7 @@
 CleanBotV = CleanBotV or {}
 local CB = CleanBotV
 
-CB.version = "0.1"
+CB.version = "0.3"
 
 -- Default saved settings (merged into CleanBotVDB on load).
 local defaults = {
@@ -15,6 +15,10 @@ local defaults = {
   y = 0,
   shown = true,
   minimapAngle = 200,
+  barPoint = "CENTER",
+  barX = 0,
+  barY = -160,
+  barShown = true,
 }
 
 function CB.Print(msg)
@@ -39,9 +43,10 @@ ef:SetScript("OnEvent", function()
     ApplyDefaults()
   elseif event == "PLAYER_LOGIN" then
     if not CB.db then ApplyDefaults() end
-    CB.BuildUI()  -- defined in UI.lua
+    CB.BuildUI()        -- defined in UI.lua
+    CB.BuildActionBar() -- defined in ActionBar.lua
     if CB.db.shown then CB.mainFrame:Show() else CB.mainFrame:Hide() end
-    CB.Print("loaded (v" .. CB.version .. "). Type /cbv to toggle the panel.")
+    CB.Print("loaded (v" .. CB.version .. "). /cbv = panel, /cbv bar = action bar.")
   end
 end)
 
@@ -51,11 +56,18 @@ SlashCmdList["CLEANBOTV"] = function(msg)
   msg = string.lower(msg or "")
   if msg == "reset" then
     CB.db.point, CB.db.x, CB.db.y = "CENTER", 0, 0
+    CB.db.barPoint, CB.db.barX, CB.db.barY = "CENTER", 0, -160
     if CB.mainFrame then
       CB.mainFrame:ClearAllPoints()
       CB.mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     end
-    CB.Print("panel position reset.")
+    if CB.bar then
+      CB.bar:ClearAllPoints()
+      CB.bar:SetPoint("CENTER", UIParent, "CENTER", 0, -160)
+    end
+    CB.Print("panel + bar positions reset.")
+  elseif msg == "bar" then
+    CB.ToggleActionBar()
   else
     CB.ToggleUI()
   end
