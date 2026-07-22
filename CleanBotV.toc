@@ -1,0 +1,10 @@
+## Interface: 11200
+## Title: CleanBot Vanilla
+## Notes: Clean button UI to manage Playerbots on vanilla 1.12 (Turtle WoW).
+## Author: B-Man-AltF4
+## Version: 0.1
+## SavedVariables: CleanBotVDB
+
+Core.lua
+Bridge.lua
+UI.lua
