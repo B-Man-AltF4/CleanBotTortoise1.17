@@ -1,25 +1,26 @@
 --[[ ActionBar.lua - compact, movable icon bar of the most-used .bot commands.
-     Complements the full panel (UI.lua); both route through Bridge.lua.
-     Vanilla 1.12 / Lua 5.0. Toggle with `/cbv bar`.
+     Horizontal or vertical (Settings). The command list CB.BAR is shared with
+     Settings.lua (keybind rows) and Bindings.xml (named bindings).
+     Vanilla 1.12 / Lua 5.0.
 ]]--
 
 local CB = CleanBotV
 
 local SIZE, GAP, PAD, GRIP = 28, 2, 5, 12
 
--- Icons are vanilla-safe paths; an unknown one just renders the default icon.
-local BAR = {
-  { cmd = "cometome",    tip = "Come to Me",     tex = "Interface\\Icons\\Spell_Nature_Swiftness" },
-  { cmd = "attackstart", tip = "Attack target",  tex = "Interface\\Icons\\Ability_Warrior_Charge" },
-  { cmd = "attackstop",  tip = "Stop attacking", tex = "Interface\\Icons\\Ability_Warrior_ShieldWall" },
-  { cmd = "pull",        tip = "Pull target",    tex = "Interface\\Icons\\Ability_Marksmanship" },
-  { cmd = "aoe",         tip = "AoE",            tex = "Interface\\Icons\\Spell_Nature_StarFall" },
-  { cmd = "focusmark", mark = 8, tip = "Focus (Skull)", tex = "Interface\\Icons\\Ability_Hunter_AimedShot" },
-  { cmd = "ccmark",    mark = 7, tip = "CC (Cross)",    tex = "Interface\\Icons\\Spell_Nature_Polymorph" },
-  { clear = true,      tip = "Clear Marks",      tex = "Interface\\Buttons\\UI-GroupLoot-Pass-Up" },
-  { cmd = "pause",       tip = "Pause",          tex = "Interface\\Icons\\INV_Misc_PocketWatch_01" },
-  { cmd = "unpause",     tip = "Unpause",        tex = "Interface\\Icons\\Spell_Holy_Renew" },
-  { cmd = "usegobject",  tip = "Use Object",     tex = "Interface\\Icons\\INV_Misc_Gear_01" },
+-- Single source of truth for the command set (bar icons + keybind rows).
+CB.BAR = {
+  { cmd = "cometome",    tip = "Come to Me",     tex = "Interface\\Icons\\Spell_Nature_Swiftness",     bind = "CLEANBOTV_COMETOME" },
+  { cmd = "attackstart", tip = "Attack target",  tex = "Interface\\Icons\\Ability_Warrior_Charge",     bind = "CLEANBOTV_ATTACK" },
+  { cmd = "attackstop",  tip = "Stop attacking", tex = "Interface\\Icons\\Ability_Warrior_ShieldWall", bind = "CLEANBOTV_STOP" },
+  { cmd = "pull",        tip = "Pull target",    tex = "Interface\\Icons\\Ability_Marksmanship",       bind = "CLEANBOTV_PULL" },
+  { cmd = "aoe",         tip = "AoE",            tex = "Interface\\Icons\\Spell_Nature_StarFall",      bind = "CLEANBOTV_AOE" },
+  { cmd = "focusmark", mark = 8, tip = "Focus (Skull)", tex = "Interface\\Icons\\Ability_Hunter_AimedShot", bind = "CLEANBOTV_FOCUS" },
+  { cmd = "ccmark",    mark = 7, tip = "CC (Cross)",    tex = "Interface\\Icons\\Spell_Nature_Polymorph",   bind = "CLEANBOTV_CC" },
+  { clear = true,      tip = "Clear Marks",     tex = "Interface\\Buttons\\UI-GroupLoot-Pass-Up",     bind = "CLEANBOTV_CLEARMARKS" },
+  { cmd = "pause",       tip = "Pause",          tex = "Interface\\Icons\\INV_Misc_PocketWatch_01",    bind = "CLEANBOTV_PAUSE" },
+  { cmd = "unpause",     tip = "Unpause",        tex = "Interface\\Icons\\Spell_Holy_Renew",           bind = "CLEANBOTV_UNPAUSE" },
+  { cmd = "usegobject",  tip = "Use Object",     tex = "Interface\\Icons\\INV_Misc_Gear_01",           bind = "CLEANBOTV_USEOBJECT" },
 }
 
 local function OnBarClick()
@@ -33,13 +34,52 @@ local function OnBarClick()
 end
 
 local function OnBarEnter()
-  GameTooltip:SetOwner(this, "ANCHOR_TOP")
+  GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
   GameTooltip:SetText(this.tip or "")
+  if this.bind then
+    local key = GetBindingKey(this.bind)
+    if key then GameTooltip:AddLine("Key: " .. key, 0.6, 0.8, 1) end
+  end
   GameTooltip:Show()
 end
 
 local function OnBarLeave()
   GameTooltip:Hide()
+end
+
+-- Position the grip + buttons and size the frame for the current orientation.
+function CB.LayoutBar()
+  local bar = CB.bar
+  if not bar then return end
+  local vertical = (CB.db.barOrient == "VERTICAL")
+  local n = table.getn(CB.barButtons)
+  local span = PAD + GRIP + n * (SIZE + GAP) + PAD
+
+  CB.barGrip:ClearAllPoints()
+  if vertical then
+    bar:SetWidth(SIZE + PAD * 2)
+    bar:SetHeight(span)
+    CB.barGrip:SetWidth(SIZE); CB.barGrip:SetHeight(GRIP)
+    CB.barGrip:SetPoint("TOP", bar, "TOP", 0, -PAD)
+    for i = 1, n do
+      CB.barButtons[i]:ClearAllPoints()
+      CB.barButtons[i]:SetPoint("TOP", bar, "TOP", 0, -(PAD + GRIP + (i - 1) * (SIZE + GAP)))
+    end
+  else
+    bar:SetWidth(span)
+    bar:SetHeight(SIZE + PAD * 2)
+    CB.barGrip:SetWidth(GRIP); CB.barGrip:SetHeight(SIZE)
+    CB.barGrip:SetPoint("LEFT", bar, "LEFT", PAD, 0)
+    for i = 1, n do
+      CB.barButtons[i]:ClearAllPoints()
+      CB.barButtons[i]:SetPoint("LEFT", bar, "LEFT", PAD + GRIP + (i - 1) * (SIZE + GAP), 0)
+    end
+  end
+end
+
+function CB.SetBarOrientation(orient)
+  CB.db.barOrient = orient
+  CB.LayoutBar()
 end
 
 function CB.ToggleActionBar()
@@ -53,12 +93,8 @@ end
 
 function CB.BuildActionBar()
   if CB.bar then return end
-  local n = table.getn(BAR)
-  local width = PAD + GRIP + n * (SIZE + GAP) + PAD
-  local height = SIZE + PAD * 2
 
   local bar = CreateFrame("Frame", "CleanBotVBar", UIParent)
-  bar:SetWidth(width); bar:SetHeight(height)
   bar:SetBackdrop({
     bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -70,10 +106,7 @@ function CB.BuildActionBar()
   bar:SetPoint(CB.db.barPoint, UIParent, CB.db.barPoint, CB.db.barX, CB.db.barY)
   bar:SetMovable(true); bar:EnableMouse(true)
 
-  -- Drag grip on the left edge.
   local grip = CreateFrame("Button", nil, bar)
-  grip:SetWidth(GRIP); grip:SetHeight(SIZE)
-  grip:SetPoint("LEFT", bar, "LEFT", PAD, 0)
   local gt = grip:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   gt:SetPoint("CENTER", grip, "CENTER", 0, 0)
   gt:SetText("|cff999999::|r")
@@ -84,25 +117,27 @@ function CB.BuildActionBar()
     local p, _, _, x, y = bar:GetPoint()
     CB.db.barPoint, CB.db.barX, CB.db.barY = p, x, y
   end)
+  CB.barGrip = grip
 
-  -- Icon buttons.
-  local i
-  for i = 1, n do
-    local spec = BAR[i]
-    local btn = CreateFrame("Button", nil, bar)
+  CB.barButtons = {}
+  for i = 1, table.getn(CB.BAR) do
+    local spec = CB.BAR[i]
+    local btn = CreateFrame("Button", "CleanBotVBarButton" .. i, bar)
     btn:SetWidth(SIZE); btn:SetHeight(SIZE)
-    btn:SetPoint("LEFT", bar, "LEFT", PAD + GRIP + (i - 1) * (SIZE + GAP), 0)
     btn:SetNormalTexture(spec.tex)
     btn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
     btn.barcmd = spec.cmd
     btn.mark = spec.mark
     btn.clear = spec.clear
     btn.tip = spec.tip
+    btn.bind = spec.bind
     btn:SetScript("OnClick", OnBarClick)
     btn:SetScript("OnEnter", OnBarEnter)
     btn:SetScript("OnLeave", OnBarLeave)
+    CB.barButtons[i] = btn
   end
 
   CB.bar = bar
+  CB.LayoutBar()
   if CB.db.barShown then bar:Show() else bar:Hide() end
 end

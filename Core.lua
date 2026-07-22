@@ -6,19 +6,20 @@
 CleanBotV = CleanBotV or {}
 local CB = CleanBotV
 
-CB.version = "0.3"
+CB.version = "0.4"
 
 -- Default saved settings (merged into CleanBotVDB on load).
 local defaults = {
   point = "CENTER",
   x = 0,
   y = 0,
-  shown = true,
+  shown = false,
   minimapAngle = 200,
   barPoint = "CENTER",
   barX = 0,
   barY = -160,
   barShown = true,
+  barOrient = "HORIZONTAL",
 }
 
 function CB.Print(msg)
@@ -27,7 +28,6 @@ end
 
 local function ApplyDefaults()
   if type(CleanBotVDB) ~= "table" then CleanBotVDB = {} end
-  local k, v
   for k, v in pairs(defaults) do
     if CleanBotVDB[k] == nil then CleanBotVDB[k] = v end
   end
@@ -46,7 +46,7 @@ ef:SetScript("OnEvent", function()
     CB.BuildUI()        -- defined in UI.lua
     CB.BuildActionBar() -- defined in ActionBar.lua
     if CB.db.shown then CB.mainFrame:Show() else CB.mainFrame:Hide() end
-    CB.Print("loaded (v" .. CB.version .. "). /cbv = panel, /cbv bar = action bar.")
+    CB.Print("loaded (v" .. CB.version .. "). Minimap: left-click = bar, right-click = settings.")
   end
 end)
 
@@ -68,7 +68,11 @@ SlashCmdList["CLEANBOTV"] = function(msg)
     CB.Print("panel + bar positions reset.")
   elseif msg == "bar" then
     CB.ToggleActionBar()
-  else
+  elseif msg == "panel" then
     CB.ToggleUI()
+  elseif msg == "settings" or msg == "config" then
+    CB.ToggleSettings()
+  else
+    CB.ToggleActionBar()
   end
 end
