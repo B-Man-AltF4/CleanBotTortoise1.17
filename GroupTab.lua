@@ -81,9 +81,19 @@ end
 
 -- LFG-style role icon per stored role (shield=tank, +=healer, sword=dps).
 local ROLE_ICON = {
-  tank   = "Interface\\Icons\\INV_Shield_06",
-  healer = "Interface\\Icons\\Spell_ChargePositive",
-  dps    = "Interface\\Icons\\INV_Sword_04",
+  tank   = "Interface\\AddOns\\CleanBotV\\icons\\attack_tank",
+  healer = "Interface\\AddOns\\CleanBotV\\icons\\attack_healer",
+  dps    = "Interface\\AddOns\\CleanBotV\\icons\\attack_dps",
+}
+
+-- Class icons: WoW's class atlas + CleanBot's tex-coord table.
+local CLASS_ICON_TEX = "Interface\\WorldStateFrame\\Icons-Classes"
+local CLASS_ICON_COORDS = {
+  WARRIOR = { 0, 0.25, 0, 0.25 },    MAGE = { 0.25, 0.5, 0, 0.25 },
+  ROGUE   = { 0.5, 0.75, 0, 0.25 },  DRUID = { 0.75, 1.0, 0, 0.25 },
+  HUNTER  = { 0, 0.25, 0.25, 0.5 },  SHAMAN = { 0.25, 0.5, 0.25, 0.5 },
+  PRIEST  = { 0.5, 0.75, 0.25, 0.5 }, WARLOCK = { 0.75, 1.0, 0.25, 0.5 },
+  PALADIN = { 0, 0.25, 0.5, 0.75 },  DEATHKNIGHT = { 0.25, 0.5, 0.5, 0.75 },
 }
 
 local function DoAction(spec)
@@ -173,9 +183,13 @@ function CB.RefreshGroup()
         row.roleIcon:SetWidth(14); row.roleIcon:SetHeight(14)
         row.roleIcon:SetPoint("LEFT", row, "LEFT", 3, 0)
         row.roleIcon:Hide()
+        row.classIcon = row:CreateTexture(nil, "OVERLAY")
+        row.classIcon:SetWidth(14); row.classIcon:SetHeight(14)
+        row.classIcon:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+        row.classIcon:Hide()
         row.txt = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         row.txt:SetPoint("LEFT", row, "LEFT", 20, 0)
-        row.txt:SetWidth(108); row.txt:SetJustifyH("LEFT")
+        row.txt:SetWidth(102); row.txt:SetJustifyH("LEFT")
         row.hl = row:CreateTexture(nil, "BACKGROUND")
         row.hl:SetAllPoints(row); row.hl:SetTexture(0.3, 0.5, 0.9, 0.3); row.hl:Hide()
         row:SetScript("OnClick", function()
@@ -195,6 +209,14 @@ function CB.RefreshGroup()
         row.roleIcon:SetTexture(ROLE_ICON[role]); row.roleIcon:Show()
       else
         row.roleIcon:Hide()
+      end
+      local coords = cls and CLASS_ICON_COORDS[cls]
+      if coords then
+        row.classIcon:SetTexture(CLASS_ICON_TEX)
+        row.classIcon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+        row.classIcon:Show()
+      else
+        row.classIcon:Hide()
       end
       if CB.selectedBotUnit == unit then row.hl:Show() else row.hl:Hide() end
       row:Show()
