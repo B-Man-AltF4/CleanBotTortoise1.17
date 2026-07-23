@@ -6,7 +6,7 @@
 CleanBotV = CleanBotV or {}
 local CB = CleanBotV
 
-CB.version = "0.4"
+CB.version = "0.5"
 
 -- Default saved settings (merged into CleanBotVDB on load).
 local defaults = {
@@ -46,7 +46,7 @@ ef:SetScript("OnEvent", function()
     CB.BuildUI()        -- defined in UI.lua
     CB.BuildActionBar() -- defined in ActionBar.lua
     if CB.db.shown then CB.mainFrame:Show() else CB.mainFrame:Hide() end
-    CB.Print("loaded (v" .. CB.version .. "). Minimap: left-click = bar, right-click = settings.")
+    CB.Print("loaded (v" .. CB.version .. "). Click the minimap button for the menu.")
   end
 end)
 

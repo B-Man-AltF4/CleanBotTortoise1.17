@@ -47,6 +47,32 @@ local function OnButtonClick()
   end
 end
 
+-- Minimap dropdown menu (rebuilt each open, so checks reflect current state).
+local function CleanBotVMenuInit()
+  local info
+
+  info = {}
+  info.text = "CleanBot"; info.isTitle = 1; info.notCheckable = 1
+  UIDropDownMenu_AddButton(info)
+
+  info = {}
+  info.text = "Show Action Bar"
+  info.checked = CB.db.barShown
+  info.func = function() CB.ToggleActionBar() end
+  UIDropDownMenu_AddButton(info)
+
+  info = {}
+  info.text = "Show Command Panel"
+  info.checked = CB.db.shown
+  info.func = function() CB.ToggleUI() end
+  UIDropDownMenu_AddButton(info)
+
+  info = {}
+  info.text = "Settings..."; info.notCheckable = 1
+  info.func = function() CloseDropDownMenus(); CB.ToggleSettings() end
+  UIDropDownMenu_AddButton(info)
+end
+
 local function BuildMinimapButton()
   if CB.minimapButton then return end
 
@@ -67,15 +93,19 @@ local function BuildMinimapButton()
   local angle = math.rad(CB.db.minimapAngle or 200)
   b:SetPoint("CENTER", Minimap, "CENTER", 80 * math.cos(angle), 80 * math.sin(angle))
 
+  if not CleanBotVMenu then
+    local menu = CreateFrame("Frame", "CleanBotVMenu", UIParent, "UIDropDownMenuTemplate")
+    UIDropDownMenu_Initialize(menu, CleanBotVMenuInit, "MENU")
+  end
+
   b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   b:SetScript("OnClick", function()
-    if arg1 == "RightButton" then CB.ToggleSettings() else CB.ToggleActionBar() end
+    ToggleDropDownMenu(1, nil, CleanBotVMenu, "cursor", 0, 0)
   end)
   b:SetScript("OnEnter", function()
     GameTooltip:SetOwner(this, "ANCHOR_LEFT")
     GameTooltip:AddLine("CleanBot - Party Bots")
-    GameTooltip:AddLine("Left-click: action bar", 1, 1, 1)
-    GameTooltip:AddLine("Right-click: settings", 1, 1, 1)
+    GameTooltip:AddLine("Click for menu", 1, 1, 1)
     GameTooltip:Show()
   end)
   b:SetScript("OnLeave", function() GameTooltip:Hide() end)
