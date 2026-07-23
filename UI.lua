@@ -68,6 +68,11 @@ local function CleanBotVMenuInit()
   UIDropDownMenu_AddButton(info)
 
   info = {}
+  info.text = "Party Bot Roster"; info.notCheckable = 1
+  info.func = function() CloseDropDownMenus(); CB.ToggleGroup() end
+  UIDropDownMenu_AddButton(info)
+
+  info = {}
   info.text = "Settings..."; info.notCheckable = 1
   info.func = function() CloseDropDownMenus(); CB.ToggleSettings() end
   UIDropDownMenu_AddButton(info)

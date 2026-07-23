@@ -6,7 +6,7 @@
 CleanBotV = CleanBotV or {}
 local CB = CleanBotV
 
-CB.version = "0.5"
+CB.version = "0.6"
 
 -- Default saved settings (merged into CleanBotVDB on load).
 local defaults = {
@@ -20,6 +20,9 @@ local defaults = {
   barY = -160,
   barShown = true,
   barOrient = "HORIZONTAL",
+  groupPoint = "CENTER",
+  groupX = 250,
+  groupY = 0,
 }
 
 function CB.Print(msg)
@@ -45,6 +48,7 @@ ef:SetScript("OnEvent", function()
     if not CB.db then ApplyDefaults() end
     CB.BuildUI()        -- defined in UI.lua
     CB.BuildActionBar() -- defined in ActionBar.lua
+    CB.BuildGroup()     -- defined in GroupTab.lua
     if CB.db.shown then CB.mainFrame:Show() else CB.mainFrame:Hide() end
     CB.Print("loaded (v" .. CB.version .. "). Click the minimap button for the menu.")
   end
@@ -72,6 +76,8 @@ SlashCmdList["CLEANBOTV"] = function(msg)
     CB.ToggleUI()
   elseif msg == "settings" or msg == "config" then
     CB.ToggleSettings()
+  elseif msg == "group" or msg == "roster" then
+    CB.ToggleGroup()
   else
     CB.ToggleActionBar()
   end
