@@ -73,8 +73,18 @@ function CB.SetBotRole(unit, role)
   TargetUnit(unit)
   SendChatMessage(".bot setrole " .. role, "SAY")
   TargetLastTarget()
+  CB.db.botRoles = CB.db.botRoles or {}
+  CB.db.botRoles[UnitName(unit)] = role
   if CB.SetStatus then CB.SetStatus("setrole " .. role .. " -> " .. (UnitName(unit) or "?")) end
+  CB.RefreshGroup()
 end
+
+-- LFG-style role icon per stored role (shield=tank, +=healer, sword=dps).
+local ROLE_ICON = {
+  tank   = "Interface\\Icons\\INV_Shield_06",
+  healer = "Interface\\Icons\\Spell_ChargePositive",
+  dps    = "Interface\\Icons\\INV_Sword_04",
+}
 
 local function DoAction(spec)
   if spec.kind == "mark" then CB.BotMark(spec.icon, spec.arg)
@@ -159,9 +169,13 @@ function CB.RefreshGroup()
         row = CreateFrame("Button", nil, CB.botPane)
         row:SetWidth(150); row:SetHeight(18)
         row:SetPoint("TOPLEFT", CB.botPane, "TOPLEFT", 2, -2 - (shown - 1) * 18)
+        row.roleIcon = row:CreateTexture(nil, "OVERLAY")
+        row.roleIcon:SetWidth(14); row.roleIcon:SetHeight(14)
+        row.roleIcon:SetPoint("LEFT", row, "LEFT", 3, 0)
+        row.roleIcon:Hide()
         row.txt = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        row.txt:SetPoint("LEFT", row, "LEFT", 4, 0)
-        row.txt:SetWidth(120); row.txt:SetJustifyH("LEFT")
+        row.txt:SetPoint("LEFT", row, "LEFT", 20, 0)
+        row.txt:SetWidth(108); row.txt:SetJustifyH("LEFT")
         row.hl = row:CreateTexture(nil, "BACKGROUND")
         row.hl:SetAllPoints(row); row.hl:SetTexture(0.3, 0.5, 0.9, 0.3); row.hl:Hide()
         row:SetScript("OnClick", function()
@@ -176,6 +190,12 @@ function CB.RefreshGroup()
       local r, g, b = ClassColor(cls)
       row.txt:SetText((UnitName(unit) or "?") .. " |cff808080L" .. (UnitLevel(unit) or "?") .. "|r")
       row.txt:SetTextColor(r, g, b)
+      local role = CB.db.botRoles and CB.db.botRoles[UnitName(unit)]
+      if role and ROLE_ICON[role] then
+        row.roleIcon:SetTexture(ROLE_ICON[role]); row.roleIcon:Show()
+      else
+        row.roleIcon:Hide()
+      end
       if CB.selectedBotUnit == unit then row.hl:Show() else row.hl:Hide() end
       row:Show()
     end
@@ -350,6 +370,7 @@ function CB.BuildGroup()  -- name kept for Core/minimap compatibility
   end)
 
   CB.groupFilter = "All"
+  CB.db.botRoles = CB.db.botRoles or {}
   CB.win = w
 end
 
