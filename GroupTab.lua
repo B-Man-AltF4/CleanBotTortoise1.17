@@ -5,7 +5,7 @@
      Vanilla 1.12 / Lua 5.0.
 ]]--
 
-local CB = CleanBotTortus
+local CB = CleanBotTortoise
 
 local TABS = { "Manage", "Individual", "Group", "Settings" }
 
@@ -429,7 +429,7 @@ local function BuildGroupBody(body)
   ap:SetBackdrop(BD); ap:SetBackdropColor(0, 0, 0, 0.4)
   CB.availPane = ap
 
-  local scroll = CreateFrame("ScrollFrame", "CleanBotTortusAvailScroll", ap, "FauxScrollFrameTemplate")
+  local scroll = CreateFrame("ScrollFrame", "CleanBotTortoiseAvailScroll", ap, "FauxScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", ap, "TOPLEFT", 5, -5)
   scroll:SetPoint("BOTTOMRIGHT", ap, "BOTTOMRIGHT", -26, 5)
   scroll:SetScript("OnVerticalScroll", function()
@@ -474,7 +474,7 @@ local function BuildGroupBody(body)
   roleLabel:SetPoint("TOPLEFT", body, "TOPLEFT", cx, -52)
   roleLabel:SetText("Role:")
 
-  local drop = CreateFrame("Frame", "CleanBotTortusRoleDrop", body, "UIDropDownMenuTemplate")
+  local drop = CreateFrame("Frame", "CleanBotTortoiseRoleDrop", body, "UIDropDownMenuTemplate")
   drop:SetPoint("TOPLEFT", body, "TOPLEFT", cx - 14, -64)
   UIDropDownMenu_Initialize(drop, RoleDropInit)
   UIDropDownMenu_SetWidth(96, drop)
@@ -506,7 +506,7 @@ local function BuildGroupBody(body)
   local hName = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   hName:SetPoint("TOPLEFT", bp, "TOPLEFT", 58, -4); hName:SetText("|cffffffffName|r")
 
-  local gscroll = CreateFrame("ScrollFrame", "CleanBotTortusGroupScroll", bp, "FauxScrollFrameTemplate")
+  local gscroll = CreateFrame("ScrollFrame", "CleanBotTortoiseGroupScroll", bp, "FauxScrollFrameTemplate")
   gscroll:SetPoint("TOPLEFT", bp, "TOPLEFT", 2, -20)
   gscroll:SetPoint("BOTTOMRIGHT", bp, "BOTTOMRIGHT", -24, 4)
   gscroll:SetScript("OnVerticalScroll", function()
@@ -569,7 +569,7 @@ end
 function CB.BuildGroup()  -- name kept for Core/minimap compatibility
   if CB.win then return end
 
-  local w = CreateFrame("Frame", "CleanBotTortusWindow", UIParent)
+  local w = CreateFrame("Frame", "CleanBotTortoiseWindow", UIParent)
   w:SetWidth(580); w:SetHeight(432)
   w:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16,

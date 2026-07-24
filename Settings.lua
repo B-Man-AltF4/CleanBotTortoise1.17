@@ -3,10 +3,10 @@
      Vanilla 1.12 / Lua 5.0.
 ]]--
 
-local CB = CleanBotTortus
+local CB = CleanBotTortoise
 
 -- Friendly names for the Blizzard Key Bindings menu (built from CB.BAR).
-BINDING_HEADER_CLEANBOTTORTUS = "CleanBotTortoise"
+BINDING_HEADER_CLEANBOTTORTOISE = "CleanBotTortoise"
 do
   local i
   for i = 1, table.getn(CB.BAR) do
@@ -146,7 +146,7 @@ function CB.BuildSettings(parent)
   end
 
   -- Fullscreen key-capture overlay.
-  local cap = CreateFrame("Frame", "CleanBotTortusKeyCapture", UIParent)
+  local cap = CreateFrame("Frame", "CleanBotTortoiseKeyCapture", UIParent)
   cap:SetAllPoints(UIParent)
   cap:SetFrameStrata("FULLSCREEN_DIALOG")
   cap:EnableKeyboard(true); cap:EnableMouse(true)

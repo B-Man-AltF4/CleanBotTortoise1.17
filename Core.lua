@@ -3,12 +3,12 @@
      Vanilla 1.12 / Lua 5.0 - see PLAN.md for compatibility rules.
 ]]--
 
-CleanBotTortus = CleanBotTortus or {}
-local CB = CleanBotTortus
+CleanBotTortoise = CleanBotTortoise or {}
+local CB = CleanBotTortoise
 
 CB.version = "0.16"
 
--- Default saved settings (merged into CleanBotTortusDB on load).
+-- Default saved settings (merged into CleanBotTortoiseDB on load).
 local defaults = {
   point = "CENTER",
   x = 0,
@@ -26,19 +26,19 @@ local defaults = {
 }
 
 function CB.Print(msg)
-  DEFAULT_CHAT_FRAME:AddMessage("|cff66ccffCleanBotTortus:|r " .. tostring(msg))
+  DEFAULT_CHAT_FRAME:AddMessage("|cff66ccffCleanBotTortoise:|r " .. tostring(msg))
 end
 
 local function ApplyDefaults()
-  if type(CleanBotTortusDB) ~= "table" then CleanBotTortusDB = {} end
+  if type(CleanBotTortoiseDB) ~= "table" then CleanBotTortoiseDB = {} end
   for k, v in pairs(defaults) do
-    if CleanBotTortusDB[k] == nil then CleanBotTortusDB[k] = v end
+    if CleanBotTortoiseDB[k] == nil then CleanBotTortoiseDB[k] = v end
   end
-  CB.db = CleanBotTortusDB
+  CB.db = CleanBotTortoiseDB
 end
 
 -- Event dispatch. In 1.12 the handler reads the globals `event` / `arg1` / `this`.
-local ef = CreateFrame("Frame", "CleanBotTortusEventFrame")
+local ef = CreateFrame("Frame", "CleanBotTortoiseEventFrame")
 ef:RegisterEvent("VARIABLES_LOADED")
 ef:RegisterEvent("PLAYER_LOGIN")
 ef:SetScript("OnEvent", function()
@@ -55,8 +55,8 @@ ef:SetScript("OnEvent", function()
 end)
 
 -- Slash command: /cbv toggles, /cbv reset re-centers the panel.
-SLASH_CLEANBOTTORTUS1 = "/cbv"
-SlashCmdList["CLEANBOTTORTUS"] = function(msg)
+SLASH_CLEANBOTTORTOISE1 = "/cbv"
+SlashCmdList["CLEANBOTTORTOISE"] = function(msg)
   msg = string.lower(msg or "")
   if msg == "reset" then
     CB.db.point, CB.db.x, CB.db.y = "CENTER", 0, 0

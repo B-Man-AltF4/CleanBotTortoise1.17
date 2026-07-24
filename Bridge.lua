@@ -9,7 +9,7 @@
      There is no data-out from bots on this server, so there is nothing to parse.
 ]]--
 
-local CB = CleanBotTortus
+local CB = CleanBotTortoise
 
 -- Fire a bare `.bot <sub>` command (no argument).
 function CB.Bot(sub)

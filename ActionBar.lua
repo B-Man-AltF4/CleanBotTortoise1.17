@@ -4,23 +4,23 @@
      Vanilla 1.12 / Lua 5.0.
 ]]--
 
-local CB = CleanBotTortus
+local CB = CleanBotTortoise
 
 local SIZE, GAP, PAD, GRIP = 28, 2, 5, 12
 
 -- Single source of truth for the command set (bar icons + keybind rows).
 CB.BAR = {
-  { cmd = "cometome",    tip = "Come to Me",     tex = "Interface\\Icons\\Spell_Nature_Swiftness",     bind = "CLEANBOTTORTUS_COMETOME" },
-  { cmd = "attackstart", tip = "Attack target",  tex = "Interface\\Icons\\Ability_Warrior_Charge",     bind = "CLEANBOTTORTUS_ATTACK" },
-  { cmd = "attackstop",  tip = "Stop attacking", tex = "Interface\\Icons\\Ability_Warrior_ShieldWall", bind = "CLEANBOTTORTUS_STOP" },
-  { cmd = "pull",        tip = "Pull target",    tex = "Interface\\Icons\\Ability_Marksmanship",       bind = "CLEANBOTTORTUS_PULL" },
-  { cmd = "aoe",         tip = "AoE",            tex = "Interface\\Icons\\Spell_Nature_StarFall",      bind = "CLEANBOTTORTUS_AOE" },
-  { cmd = "focusmark", mark = 8, tip = "Focus (Skull)", tex = "Interface\\Icons\\Ability_Hunter_AimedShot", bind = "CLEANBOTTORTUS_FOCUS" },
-  { cmd = "ccmark",    mark = 7, tip = "CC (Cross)",    tex = "Interface\\Icons\\Spell_Nature_Polymorph",   bind = "CLEANBOTTORTUS_CC" },
-  { clear = true,      tip = "Clear Marks",     tex = "Interface\\Buttons\\UI-GroupLoot-Pass-Up",     bind = "CLEANBOTTORTUS_CLEARMARKS" },
-  { cmd = "pause",       tip = "Pause",          tex = "Interface\\Icons\\INV_Misc_PocketWatch_01",    bind = "CLEANBOTTORTUS_PAUSE" },
-  { cmd = "unpause",     tip = "Unpause",        tex = "Interface\\Icons\\Spell_Holy_Renew",           bind = "CLEANBOTTORTUS_UNPAUSE" },
-  { cmd = "usegobject",  tip = "Use Object",     tex = "Interface\\Icons\\INV_Misc_Gear_01",           bind = "CLEANBOTTORTUS_USEOBJECT" },
+  { cmd = "cometome",    tip = "Come to Me",     tex = "Interface\\Icons\\Spell_Nature_Swiftness",     bind = "CLEANBOTTORTOISE_COMETOME" },
+  { cmd = "attackstart", tip = "Attack target",  tex = "Interface\\Icons\\Ability_Warrior_Charge",     bind = "CLEANBOTTORTOISE_ATTACK" },
+  { cmd = "attackstop",  tip = "Stop attacking", tex = "Interface\\Icons\\Ability_Warrior_ShieldWall", bind = "CLEANBOTTORTOISE_STOP" },
+  { cmd = "pull",        tip = "Pull target",    tex = "Interface\\Icons\\Ability_Marksmanship",       bind = "CLEANBOTTORTOISE_PULL" },
+  { cmd = "aoe",         tip = "AoE",            tex = "Interface\\Icons\\Spell_Nature_StarFall",      bind = "CLEANBOTTORTOISE_AOE" },
+  { cmd = "focusmark", mark = 8, tip = "Focus (Skull)", tex = "Interface\\Icons\\Ability_Hunter_AimedShot", bind = "CLEANBOTTORTOISE_FOCUS" },
+  { cmd = "ccmark",    mark = 7, tip = "CC (Cross)",    tex = "Interface\\Icons\\Spell_Nature_Polymorph",   bind = "CLEANBOTTORTOISE_CC" },
+  { clear = true,      tip = "Clear Marks",     tex = "Interface\\Buttons\\UI-GroupLoot-Pass-Up",     bind = "CLEANBOTTORTOISE_CLEARMARKS" },
+  { cmd = "pause",       tip = "Pause",          tex = "Interface\\Icons\\INV_Misc_PocketWatch_01",    bind = "CLEANBOTTORTOISE_PAUSE" },
+  { cmd = "unpause",     tip = "Unpause",        tex = "Interface\\Icons\\Spell_Holy_Renew",           bind = "CLEANBOTTORTOISE_UNPAUSE" },
+  { cmd = "usegobject",  tip = "Use Object",     tex = "Interface\\Icons\\INV_Misc_Gear_01",           bind = "CLEANBOTTORTOISE_USEOBJECT" },
 }
 
 local function OnBarClick()
@@ -94,7 +94,7 @@ end
 function CB.BuildActionBar()
   if CB.bar then return end
 
-  local bar = CreateFrame("Frame", "CleanBotTortusBar", UIParent)
+  local bar = CreateFrame("Frame", "CleanBotTortoiseBar", UIParent)
   bar:SetBackdrop({
     bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -122,7 +122,7 @@ function CB.BuildActionBar()
   CB.barButtons = {}
   for i = 1, table.getn(CB.BAR) do
     local spec = CB.BAR[i]
-    local btn = CreateFrame("Button", "CleanBotTortusBarButton" .. i, bar)
+    local btn = CreateFrame("Button", "CleanBotTortoiseBarButton" .. i, bar)
     btn:SetWidth(SIZE); btn:SetHeight(SIZE)
     btn:SetNormalTexture(spec.tex)
     btn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")

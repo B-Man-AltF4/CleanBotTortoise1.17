@@ -3,7 +3,7 @@
      Every button routes through Bridge.lua (CB.Bot / CB.BotMark / CB.BotClearMarks).
 ]]--
 
-local CB = CleanBotTortus
+local CB = CleanBotTortoise
 
 -- Button grid (first 10 fill two columns; #11 spans full width).
 --   kind "cmd"        -> CB.Bot(arg)
@@ -48,7 +48,7 @@ local function OnButtonClick()
 end
 
 -- Minimap dropdown menu (rebuilt each open, so checks reflect current state).
-local function CleanBotTortusMenuInit()
+local function CleanBotTortoiseMenuInit()
   local info
 
   info = {}
@@ -81,7 +81,7 @@ end
 local function BuildMinimapButton()
   if CB.minimapButton then return end
 
-  local b = CreateFrame("Button", "CleanBotTortusMinimapButton", Minimap)
+  local b = CreateFrame("Button", "CleanBotTortoiseMinimapButton", Minimap)
   b:SetWidth(31); b:SetHeight(31)
   b:SetFrameStrata("MEDIUM"); b:SetFrameLevel(8)
 
@@ -98,14 +98,14 @@ local function BuildMinimapButton()
   local angle = math.rad(CB.db.minimapAngle or 200)
   b:SetPoint("CENTER", Minimap, "CENTER", 80 * math.cos(angle), 80 * math.sin(angle))
 
-  if not CleanBotTortusMenu then
-    local menu = CreateFrame("Frame", "CleanBotTortusMenu", UIParent, "UIDropDownMenuTemplate")
-    UIDropDownMenu_Initialize(menu, CleanBotTortusMenuInit, "MENU")
+  if not CleanBotTortoiseMenu then
+    local menu = CreateFrame("Frame", "CleanBotTortoiseMenu", UIParent, "UIDropDownMenuTemplate")
+    UIDropDownMenu_Initialize(menu, CleanBotTortoiseMenuInit, "MENU")
   end
 
   b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   b:SetScript("OnClick", function()
-    ToggleDropDownMenu(1, nil, CleanBotTortusMenu, "cursor", 0, 0)
+    ToggleDropDownMenu(1, nil, CleanBotTortoiseMenu, "cursor", 0, 0)
   end)
   b:SetScript("OnEnter", function()
     GameTooltip:SetOwner(this, "ANCHOR_LEFT")
@@ -124,7 +124,7 @@ function CB.BuildUI()
   local BW, BH, GAP, TOP = 102, 22, 6, -30
   local ROW = BH + GAP
 
-  local f = CreateFrame("Frame", "CleanBotTortusFrame", UIParent)
+  local f = CreateFrame("Frame", "CleanBotTortoiseFrame", UIParent)
   f:SetWidth(236); f:SetHeight(238)
   f:SetBackdrop({
     bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
