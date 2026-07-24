@@ -162,9 +162,13 @@ local function CollectWho()
   local n = GetNumWhoResults()
   local i
   for i = 1, n do
-    local name, _, level, _, classLoc = GetWhoInfo(i)
+    local name, _, level, _, classLoc, zone = GetWhoInfo(i)
     if name and not InPartyByName(name) then
-      table.insert(CB.available, { name = name, level = level or 0, class = LOCALIZED_TO_TOKEN[classLoc] })
+      -- string.upper turns the localized class ("Warrior") into the token ("WARRIOR").
+      table.insert(CB.available, {
+        name = name, level = level or 0,
+        class = classLoc and string.upper(classLoc), zone = zone,
+      })
     end
   end
   table.sort(CB.available, function(a, b) return a.level < b.level end)
@@ -207,6 +211,7 @@ function CB.RefreshAvailable()
       row.botName = b.name
       row.lvl:SetText("|cffffd200" .. b.level .. "|r")
       row.txt:SetText(b.name)
+      row.zone:SetText(b.zone or "")
       local rr, gg, bb = ClassColor(b.class)
       row.txt:SetTextColor(rr, gg, bb)
       local coords = b.class and CLASS_ICON_COORDS[b.class]
@@ -315,6 +320,15 @@ function CB.RefreshGroup()
   CB.groupHeader:SetText("Managing: " .. table.getn(units) .. " bot" .. (table.getn(units) == 1 and "" or "s"))
   local selName = CB.selectedBotUnit and UnitExists(CB.selectedBotUnit) and UnitName(CB.selectedBotUnit)
   CB.groupSelected:SetText(selName and ("Selected: " .. selName) or "Selected: (none - click a bot)")
+
+  -- Show "Convert to Raid" once the party is full (5) and not yet a raid.
+  if CB.convertBtn then
+    if GetNumRaidMembers() == 0 and GetNumPartyMembers() >= 4 then
+      CB.convertBtn:Show()
+    else
+      CB.convertBtn:Hide()
+    end
+  end
 end
 
 --------------------------------------------------------------------------------
@@ -337,69 +351,26 @@ local function RoleDropInit()
 end
 
 local function BuildGroupBody(body)
-  -- Left: your Group / Raid bots (Lvl | Class | Name).
-  local grLabel = body:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  grLabel:SetPoint("TOPLEFT", body, "TOPLEFT", 2, -2)
-  grLabel:SetText("Group / Raid")
-
-  local bp = CreateFrame("Frame", nil, body)
-  bp:SetWidth(180); bp:SetHeight(334)
-  bp:SetPoint("TOPLEFT", body, "TOPLEFT", 0, -20)
-  bp:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+  local BD = { bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16,
-    edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-  bp:SetBackdropColor(0, 0, 0, 0.4)
-  CB.botPane = bp
-  CB.botRows = {}
+    edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } }
 
-  local hLvl = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  hLvl:SetPoint("TOPLEFT", bp, "TOPLEFT", 15, -4); hLvl:SetText("|cffffffffLvl|r")
-  local hClass = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  hClass:SetPoint("TOPLEFT", bp, "TOPLEFT", 38, -4); hClass:SetText("|cffffffffCls|r")
-  local hName = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  hName:SetPoint("TOPLEFT", bp, "TOPLEFT", 58, -4); hName:SetText("|cffffffffName|r")
-
-  -- Middle: controls for the selected bot.
-  local cx = 192
-  CB.groupHeader = body:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  CB.groupHeader:SetPoint("TOPLEFT", body, "TOPLEFT", cx, -4)
-  CB.groupHeader:SetText("Managing: 0 bots")
-
-  CB.groupSelected = body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  CB.groupSelected:SetPoint("TOPLEFT", body, "TOPLEFT", cx, -24)
-  CB.groupSelected:SetWidth(106); CB.groupSelected:SetJustifyH("LEFT")
-  CB.groupSelected:SetText("Selected: (none)")
-
-  local roleLabel = body:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  roleLabel:SetPoint("TOPLEFT", body, "TOPLEFT", cx, -50)
-  roleLabel:SetText("Role:")
-
-  local drop = CreateFrame("Frame", "CleanBotVRoleDrop", body, "UIDropDownMenuTemplate")
-  drop:SetPoint("TOPLEFT", body, "TOPLEFT", cx - 14, -62)
-  UIDropDownMenu_Initialize(drop, RoleDropInit)
-  UIDropDownMenu_SetWidth(96, drop)
-  UIDropDownMenu_SetText("Set Role...", drop)
-  CB.roleDrop = drop
-
-  -- Right: available bots (/who) - scrollable, click a name to invite.
-  local rx = 306
+  -- Left: available bots (/who) - scrollable, click a name to invite.
   CB.availHeader = body:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  CB.availHeader:SetPoint("TOPLEFT", body, "TOPLEFT", rx, -2)
+  CB.availHeader:SetPoint("TOPLEFT", body, "TOPLEFT", 2, -2)
   CB.availHeader:SetText("Available (0)")
 
   local rescan = CreateFrame("Button", nil, body, "UIPanelButtonTemplate")
   rescan:SetWidth(60); rescan:SetHeight(18)
-  rescan:SetPoint("TOPRIGHT", body, "TOPRIGHT", 0, -1)
+  rescan:SetPoint("TOPLEFT", body, "TOPLEFT", 182, -1)
   rescan:SetText("Rescan")
   rescan:SetScript("OnClick", function() CB.ScanWho() end)
 
   local ap = CreateFrame("Frame", nil, body)
-  ap:SetPoint("TOPLEFT", body, "TOPLEFT", rx, -22)
-  ap:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", 0, 4)
-  ap:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16,
-    edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-  ap:SetBackdropColor(0, 0, 0, 0.4)
+  ap:SetPoint("TOPLEFT", body, "TOPLEFT", 0, -22)
+  ap:SetPoint("BOTTOMLEFT", body, "BOTTOMLEFT", 0, 4)
+  ap:SetWidth(244)
+  ap:SetBackdrop(BD); ap:SetBackdropColor(0, 0, 0, 0.4)
   CB.availPane = ap
 
   local scroll = CreateFrame("ScrollFrame", "CleanBotVAvailScroll", ap, "FauxScrollFrameTemplate")
@@ -422,13 +393,65 @@ local function BuildGroupBody(body)
     row.cico = row:CreateTexture(nil, "OVERLAY")
     row.cico:SetWidth(12); row.cico:SetHeight(12); row.cico:SetPoint("LEFT", row, "LEFT", 24, 0)
     row.txt = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    row.txt:SetPoint("LEFT", row, "LEFT", 40, 0); row.txt:SetPoint("RIGHT", row, "RIGHT", -2, 0)
-    row.txt:SetJustifyH("LEFT")
+    row.txt:SetPoint("LEFT", row, "LEFT", 40, 0); row.txt:SetWidth(94); row.txt:SetJustifyH("LEFT")
+    row.zone = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    row.zone:SetPoint("LEFT", row, "LEFT", 136, 0); row.zone:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+    row.zone:SetJustifyH("LEFT")
     row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
     row:SetScript("OnClick", OnAvailClick)
     row:Hide()
     CB.availRows[line] = row
   end
+
+  -- Center: controls for the selected bot + convert-to-raid.
+  local cx = 254
+  CB.groupHeader = body:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  CB.groupHeader:SetPoint("TOPLEFT", body, "TOPLEFT", cx, -4)
+  CB.groupHeader:SetText("Managing: 0 bots")
+
+  CB.groupSelected = body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  CB.groupSelected:SetPoint("TOPLEFT", body, "TOPLEFT", cx, -24)
+  CB.groupSelected:SetWidth(104); CB.groupSelected:SetJustifyH("LEFT")
+  CB.groupSelected:SetText("Selected: (none)")
+
+  local roleLabel = body:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  roleLabel:SetPoint("TOPLEFT", body, "TOPLEFT", cx, -52)
+  roleLabel:SetText("Role:")
+
+  local drop = CreateFrame("Frame", "CleanBotVRoleDrop", body, "UIDropDownMenuTemplate")
+  drop:SetPoint("TOPLEFT", body, "TOPLEFT", cx - 14, -64)
+  UIDropDownMenu_Initialize(drop, RoleDropInit)
+  UIDropDownMenu_SetWidth(96, drop)
+  UIDropDownMenu_SetText("Set Role...", drop)
+  CB.roleDrop = drop
+
+  local convert = CreateFrame("Button", nil, body, "UIPanelButtonTemplate")
+  convert:SetWidth(104); convert:SetHeight(22)
+  convert:SetPoint("TOPLEFT", body, "TOPLEFT", cx, -104)
+  convert:SetText("Convert to Raid")
+  convert:SetScript("OnClick", function() ConvertToRaid() end)
+  convert:Hide()
+  CB.convertBtn = convert
+
+  -- Right: your Group / Raid bots (Lvl | Class | Name).
+  local grx = 368
+  local grLabel = body:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  grLabel:SetPoint("TOPLEFT", body, "TOPLEFT", grx + 2, -2)
+  grLabel:SetText("Group / Raid")
+
+  local bp = CreateFrame("Frame", nil, body)
+  bp:SetWidth(184); bp:SetHeight(334)
+  bp:SetPoint("TOPLEFT", body, "TOPLEFT", grx, -20)
+  bp:SetBackdrop(BD); bp:SetBackdropColor(0, 0, 0, 0.4)
+  CB.botPane = bp
+  CB.botRows = {}
+
+  local hLvl = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  hLvl:SetPoint("TOPLEFT", bp, "TOPLEFT", 15, -4); hLvl:SetText("|cffffffffLvl|r")
+  local hClass = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  hClass:SetPoint("TOPLEFT", bp, "TOPLEFT", 38, -4); hClass:SetText("|cffffffffCls|r")
+  local hName = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  hName:SetPoint("TOPLEFT", bp, "TOPLEFT", 58, -4); hName:SetText("|cffffffffName|r")
 end
 
 local function BuildPlaceholder(body, text)

@@ -6,7 +6,7 @@
 CleanBotV = CleanBotV or {}
 local CB = CleanBotV
 
-CB.version = "0.13"
+CB.version = "0.14"
 
 -- Default saved settings (merged into CleanBotVDB on load).
 local defaults = {
