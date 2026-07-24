@@ -168,14 +168,14 @@ function CB.RefreshAvailable()
     local row = CB.availRows[i]
     if not row then
       row = CreateFrame("Button", nil, CB.availPane)
-      row:SetWidth(232); row:SetHeight(16)
-      row:SetPoint("TOPLEFT", CB.availPane, "TOPLEFT", 2, -2 - (i - 1) * 16)
+      row:SetWidth(120); row:SetHeight(15)
+      row:SetPoint("TOPLEFT", CB.availPane, "TOPLEFT", 2, -2 - (i - 1) * 15)
       row.lvl = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-      row.lvl:SetPoint("LEFT", row, "LEFT", 3, 0); row.lvl:SetWidth(22)
+      row.lvl:SetPoint("LEFT", row, "LEFT", 2, 0); row.lvl:SetWidth(18)
       row.cico = row:CreateTexture(nil, "OVERLAY")
-      row.cico:SetWidth(12); row.cico:SetHeight(12); row.cico:SetPoint("LEFT", row, "LEFT", 26, 0)
+      row.cico:SetWidth(11); row.cico:SetHeight(11); row.cico:SetPoint("LEFT", row, "LEFT", 20, 0)
       row.txt = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-      row.txt:SetPoint("LEFT", row, "LEFT", 44, 0); row.txt:SetWidth(180); row.txt:SetJustifyH("LEFT")
+      row.txt:SetPoint("LEFT", row, "LEFT", 34, 0); row.txt:SetWidth(84); row.txt:SetJustifyH("LEFT")
       row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
       row:SetScript("OnClick", OnAvailClick)
       CB.availRows[i] = row
@@ -226,50 +226,11 @@ function CB.RefreshGroup()
   if not CB.win or not CB.win:IsShown() or CB.activeTab ~= "Group" then return end
   local units = BotUnits()
 
-  -- Which classes are present (for the left filter list).
-  local present = {}
+  -- Party bot list: all bots, sorted by level.
   local i
-  for i = 1, table.getn(units) do
-    local _, cls = UnitClass(units[i])
-    if cls then present[cls] = true end
-  end
-
-  -- Left filter buttons: "All" + present classes.
-  local filters = { { key = "All", label = "All", r = 1, g = 1, b = 1 } }
-  for i = 1, table.getn(CLASS_ORDER) do
-    local cls = CLASS_ORDER[i]
-    if present[cls] then
-      local r, g, b = ClassColor(cls)
-      table.insert(filters, { key = cls, label = CLASS_NAME[cls], r = r, g = g, b = b })
-    end
-  end
-  for i = 1, table.getn(CB.filterButtons) do CB.filterButtons[i]:Hide() end
-  for i = 1, table.getn(filters) do
-    local fb = CB.filterButtons[i]
-    if not fb then
-      fb = CreateFrame("Button", nil, CB.filterPane)
-      fb:SetWidth(120); fb:SetHeight(18)
-      fb:SetPoint("TOPLEFT", CB.filterPane, "TOPLEFT", 4, -4 - (i - 1) * 19)
-      fb.txt = fb:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-      fb.txt:SetPoint("LEFT", fb, "LEFT", 2, 0)
-      fb:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-      fb:SetScript("OnClick", function() CB.groupFilter = fb.filterKey; CB.RefreshGroup() end)
-      CB.filterButtons[i] = fb
-    end
-    fb.filterKey = filters[i].key
-    fb.txt:SetText(filters[i].label)
-    fb.txt:SetTextColor(filters[i].r, filters[i].g, filters[i].b)
-    if CB.groupFilter == filters[i].key then fb.txt:SetText("> " .. filters[i].label) end
-    fb:Show()
-  end
-
-  -- Middle bot list: Lvl | Class | Name, filtered and sorted by level.
   local list = {}
   for i = 1, table.getn(units) do
-    local _, cls = UnitClass(units[i])
-    if CB.groupFilter == "All" or CB.groupFilter == cls then
-      table.insert(list, units[i])
-    end
+    table.insert(list, units[i])
   end
   table.sort(list, function(a, b) return (UnitLevel(a) or 0) < (UnitLevel(b) or 0) end)
 
@@ -351,18 +312,28 @@ local function RoleDropInit()
 end
 
 local function BuildGroupBody(body)
-  -- Left: class filter pane.
-  local fp = CreateFrame("Frame", nil, body)
-  fp:SetWidth(128); fp:SetHeight(356)
-  fp:SetPoint("TOPLEFT", body, "TOPLEFT", 0, 0)
-  fp:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+  -- Left: available bots (/who +-5 levels) - click a name to invite.
+  CB.availHeader = body:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  CB.availHeader:SetPoint("TOPLEFT", body, "TOPLEFT", 2, -3)
+  CB.availHeader:SetText("Available")
+
+  local rescan = CreateFrame("Button", nil, body, "UIPanelButtonTemplate")
+  rescan:SetWidth(54); rescan:SetHeight(16)
+  rescan:SetPoint("TOPRIGHT", body, "TOPLEFT", 128, -1)
+  rescan:SetText("Rescan")
+  rescan:SetScript("OnClick", function() CB.ScanWho() end)
+
+  local ap = CreateFrame("Frame", nil, body)
+  ap:SetWidth(128); ap:SetHeight(334)
+  ap:SetPoint("TOPLEFT", body, "TOPLEFT", 0, -20)
+  ap:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16,
     edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-  fp:SetBackdropColor(0, 0, 0, 0.4)
-  CB.filterPane = fp
-  CB.filterButtons = {}
+  ap:SetBackdropColor(0, 0, 0, 0.4)
+  CB.availPane = ap
+  CB.availRows = {}
 
-  -- Middle: bot list pane.
+  -- Middle: party bot list pane (Lvl | Class | Name).
   local bp = CreateFrame("Frame", nil, body)
   bp:SetWidth(158); bp:SetHeight(356)
   bp:SetPoint("TOPLEFT", body, "TOPLEFT", 136, 0)
@@ -401,27 +372,6 @@ local function BuildGroupBody(body)
   UIDropDownMenu_SetWidth(120, drop)
   UIDropDownMenu_SetText("Set Role...", drop)
   CB.roleDrop = drop
-
-  -- Available bots (/who +-5 levels) - click a name to invite.
-  CB.availHeader = body:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  CB.availHeader:SetPoint("TOPLEFT", body, "TOPLEFT", rx, -98)
-  CB.availHeader:SetText("Available - click to invite")
-
-  local rescan = CreateFrame("Button", nil, body, "UIPanelButtonTemplate")
-  rescan:SetWidth(58); rescan:SetHeight(18)
-  rescan:SetPoint("TOPLEFT", body, "TOPLEFT", rx + 186, -96)
-  rescan:SetText("Rescan")
-  rescan:SetScript("OnClick", function() CB.ScanWho() end)
-
-  local ap = CreateFrame("Frame", nil, body)
-  ap:SetPoint("TOPLEFT", body, "TOPLEFT", rx, -116)
-  ap:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", -2, 4)
-  ap:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16,
-    edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-  ap:SetBackdropColor(0, 0, 0, 0.4)
-  CB.availPane = ap
-  CB.availRows = {}
 end
 
 local function BuildPlaceholder(body, text)
