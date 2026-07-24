@@ -31,4 +31,7 @@ Settings
 <img width="864" height="643" alt="image" src="https://github.com/user-attachments/assets/3f3fe575-d104-4b58-bcef-a305bafb781f" />
 
 
+Big Thanks to for the inspiration to **bennybroseph** (https://github.com/bennybroseph/CleanBot) he has a reall clean addon for 3.3.5 playerbots
+
+
 
