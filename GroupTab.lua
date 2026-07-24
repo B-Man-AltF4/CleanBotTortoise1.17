@@ -114,6 +114,11 @@ local LOCALIZED_TO_TOKEN = {
 
 CB.available = {}
 local scanPending = false
+local scanTime = 0
+local scanStage = 0 -- 1 = zone query, 2 = level-range query
+
+local AVAIL_ROW_H = 15
+local AVAIL_VISIBLE = 21
 
 local function InPartyByName(name)
   local i, n = nil, GetNumRaidMembers()
@@ -126,18 +131,33 @@ local function InPartyByName(name)
   return name == UnitName("player")
 end
 
-function CB.ScanWho()
-  if scanPending then return end
-  local lvl = UnitLevel("player") or 1
-  local lo = lvl - 5; if lo < 1 then lo = 1 end
+local function IssueWho(filter)
   scanPending = true
+  scanTime = GetTime()
   SetWhoToUI(1)
-  SendWho(lo .. "-" .. (lvl + 5))
+  SendWho(filter)
 end
 
-function CB.OnWhoUpdate()
-  if not scanPending then return end
-  scanPending = false
+-- Prefer bots in the current zone; if none, +-3 levels; at level 60, only 60.
+function CB.ScanWho()
+  if scanPending and (GetTime() - scanTime) < 2 then return end
+  local lvl = UnitLevel("player") or 1
+  if lvl >= 60 then
+    scanStage = 0
+    IssueWho("60")
+    return
+  end
+  local zone = GetRealZoneText()
+  if zone and zone ~= "" then
+    scanStage = 1
+    IssueWho('z-"' .. zone .. '"')
+  else
+    scanStage = 2
+    IssueWho((lvl - 3) .. "-" .. (lvl + 3))
+  end
+end
+
+local function CollectWho()
   CB.available = {}
   local n = GetNumWhoResults()
   local i
@@ -147,8 +167,21 @@ function CB.OnWhoUpdate()
       table.insert(CB.available, { name = name, level = level or 0, class = LOCALIZED_TO_TOKEN[classLoc] })
     end
   end
-  SetWhoToUI(0)
   table.sort(CB.available, function(a, b) return a.level < b.level end)
+end
+
+function CB.OnWhoUpdate()
+  if not scanPending then return end
+  -- Zone query returned nothing -> fall back to a +-3 level range.
+  if scanStage == 1 and GetNumWhoResults() == 0 then
+    scanStage = 2
+    local lvl = UnitLevel("player") or 1
+    IssueWho((lvl - 3) .. "-" .. (lvl + 3))
+    return
+  end
+  scanPending = false
+  SetWhoToUI(0)
+  CollectWho()
   CB.RefreshAvailable()
 end
 
@@ -159,44 +192,36 @@ local function OnAvailClick()
   end
 end
 
+-- Virtual scrolling: fixed pool of AVAIL_VISIBLE rows + FauxScrollFrame offset.
 function CB.RefreshAvailable()
-  if not CB.availRows then return end
-  local i
-  for i = 1, table.getn(CB.availRows) do CB.availRows[i]:Hide() end
-  for i = 1, table.getn(CB.available) do
-    local b = CB.available[i]
-    local row = CB.availRows[i]
-    if not row then
-      row = CreateFrame("Button", nil, CB.availPane)
-      row:SetWidth(120); row:SetHeight(15)
-      row:SetPoint("TOPLEFT", CB.availPane, "TOPLEFT", 2, -2 - (i - 1) * 15)
-      row.lvl = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-      row.lvl:SetPoint("LEFT", row, "LEFT", 2, 0); row.lvl:SetWidth(18)
-      row.cico = row:CreateTexture(nil, "OVERLAY")
-      row.cico:SetWidth(11); row.cico:SetHeight(11); row.cico:SetPoint("LEFT", row, "LEFT", 20, 0)
-      row.txt = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-      row.txt:SetPoint("LEFT", row, "LEFT", 34, 0); row.txt:SetWidth(84); row.txt:SetJustifyH("LEFT")
-      row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-      row:SetScript("OnClick", OnAvailClick)
-      CB.availRows[i] = row
-    end
-    row.botName = b.name
-    row.lvl:SetText("|cffffd200" .. b.level .. "|r")
-    row.txt:SetText(b.name)
-    local rr, gg, bb = ClassColor(b.class)
-    row.txt:SetTextColor(rr, gg, bb)
-    local coords = b.class and CLASS_ICON_COORDS[b.class]
-    if coords then
-      row.cico:SetTexture(CLASS_ICON_TEX)
-      row.cico:SetTexCoord(coords[1], coords[2], coords[3], coords[4]); row.cico:Show()
+  if not CB.availRows or not CB.availScroll then return end
+  local num = table.getn(CB.available)
+  FauxScrollFrame_Update(CB.availScroll, num, AVAIL_VISIBLE, AVAIL_ROW_H)
+  local offset = FauxScrollFrame_GetOffset(CB.availScroll)
+  local line
+  for line = 1, AVAIL_VISIBLE do
+    local row = CB.availRows[line]
+    local idx = line + offset
+    if idx <= num then
+      local b = CB.available[idx]
+      row.botName = b.name
+      row.lvl:SetText("|cffffd200" .. b.level .. "|r")
+      row.txt:SetText(b.name)
+      local rr, gg, bb = ClassColor(b.class)
+      row.txt:SetTextColor(rr, gg, bb)
+      local coords = b.class and CLASS_ICON_COORDS[b.class]
+      if coords then
+        row.cico:SetTexture(CLASS_ICON_TEX)
+        row.cico:SetTexCoord(coords[1], coords[2], coords[3], coords[4]); row.cico:Show()
+      else
+        row.cico:Hide()
+      end
+      row:Show()
     else
-      row.cico:Hide()
+      row:Hide()
     end
-    row:Show()
   end
-  if CB.availHeader then
-    CB.availHeader:SetText("Available (" .. table.getn(CB.available) .. ") - click to invite")
-  end
+  if CB.availHeader then CB.availHeader:SetText("Available (" .. num .. ")") end
 end
 
 --------------------------------------------------------------------------------
@@ -241,7 +266,7 @@ function CB.RefreshGroup()
     local row = CB.botRows[i]
     if not row then
       row = CreateFrame("Button", nil, CB.botPane)
-      row:SetWidth(150); row:SetHeight(18)
+      row:SetWidth(172); row:SetHeight(18)
       row.roleIcon = row:CreateTexture(nil, "OVERLAY")
       row.roleIcon:SetWidth(12); row.roleIcon:SetHeight(12)
       row.roleIcon:SetPoint("LEFT", row, "LEFT", 1, 0)
@@ -253,7 +278,7 @@ function CB.RefreshGroup()
       row.classIcon:SetPoint("LEFT", row, "LEFT", 40, 0)
       row.classIcon:Hide()
       row.txt = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-      row.txt:SetPoint("LEFT", row, "LEFT", 58, 0); row.txt:SetWidth(88); row.txt:SetJustifyH("LEFT")
+      row.txt:SetPoint("LEFT", row, "LEFT", 58, 0); row.txt:SetWidth(110); row.txt:SetJustifyH("LEFT")
       row.hl = row:CreateTexture(nil, "BACKGROUND")
       row.hl:SetAllPoints(row); row.hl:SetTexture(0.3, 0.5, 0.9, 0.3); row.hl:Hide()
       row:SetScript("OnClick", function()
@@ -312,31 +337,14 @@ local function RoleDropInit()
 end
 
 local function BuildGroupBody(body)
-  -- Left: available bots (/who +-5 levels) - click a name to invite.
-  CB.availHeader = body:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  CB.availHeader:SetPoint("TOPLEFT", body, "TOPLEFT", 2, -3)
-  CB.availHeader:SetText("Available")
+  -- Left: your Group / Raid bots (Lvl | Class | Name).
+  local grLabel = body:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  grLabel:SetPoint("TOPLEFT", body, "TOPLEFT", 2, -2)
+  grLabel:SetText("Group / Raid")
 
-  local rescan = CreateFrame("Button", nil, body, "UIPanelButtonTemplate")
-  rescan:SetWidth(54); rescan:SetHeight(16)
-  rescan:SetPoint("TOPRIGHT", body, "TOPLEFT", 128, -1)
-  rescan:SetText("Rescan")
-  rescan:SetScript("OnClick", function() CB.ScanWho() end)
-
-  local ap = CreateFrame("Frame", nil, body)
-  ap:SetWidth(128); ap:SetHeight(334)
-  ap:SetPoint("TOPLEFT", body, "TOPLEFT", 0, -20)
-  ap:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16,
-    edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-  ap:SetBackdropColor(0, 0, 0, 0.4)
-  CB.availPane = ap
-  CB.availRows = {}
-
-  -- Middle: party bot list pane (Lvl | Class | Name).
   local bp = CreateFrame("Frame", nil, body)
-  bp:SetWidth(158); bp:SetHeight(356)
-  bp:SetPoint("TOPLEFT", body, "TOPLEFT", 136, 0)
+  bp:SetWidth(180); bp:SetHeight(334)
+  bp:SetPoint("TOPLEFT", body, "TOPLEFT", 0, -20)
   bp:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16,
     edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
@@ -344,7 +352,6 @@ local function BuildGroupBody(body)
   CB.botPane = bp
   CB.botRows = {}
 
-  -- Column header: Lvl | Class | Name
   local hLvl = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   hLvl:SetPoint("TOPLEFT", bp, "TOPLEFT", 15, -4); hLvl:SetText("|cffffffffLvl|r")
   local hClass = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -352,26 +359,76 @@ local function BuildGroupBody(body)
   local hName = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   hName:SetPoint("TOPLEFT", bp, "TOPLEFT", 58, -4); hName:SetText("|cffffffffName|r")
 
-  -- Right: controls.
-  local rx = 304
-  CB.groupHeader = body:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  CB.groupHeader:SetPoint("TOPLEFT", body, "TOPLEFT", rx, -2)
+  -- Middle: controls for the selected bot.
+  local cx = 192
+  CB.groupHeader = body:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  CB.groupHeader:SetPoint("TOPLEFT", body, "TOPLEFT", cx, -4)
   CB.groupHeader:SetText("Managing: 0 bots")
 
   CB.groupSelected = body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  CB.groupSelected:SetPoint("TOPLEFT", body, "TOPLEFT", rx, -22)
+  CB.groupSelected:SetPoint("TOPLEFT", body, "TOPLEFT", cx, -24)
+  CB.groupSelected:SetWidth(106); CB.groupSelected:SetJustifyH("LEFT")
   CB.groupSelected:SetText("Selected: (none)")
 
   local roleLabel = body:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  roleLabel:SetPoint("TOPLEFT", body, "TOPLEFT", rx, -46)
-  roleLabel:SetText("Role (selected bot):")
+  roleLabel:SetPoint("TOPLEFT", body, "TOPLEFT", cx, -50)
+  roleLabel:SetText("Role:")
 
   local drop = CreateFrame("Frame", "CleanBotVRoleDrop", body, "UIDropDownMenuTemplate")
-  drop:SetPoint("TOPLEFT", body, "TOPLEFT", rx - 12, -60)
+  drop:SetPoint("TOPLEFT", body, "TOPLEFT", cx - 14, -62)
   UIDropDownMenu_Initialize(drop, RoleDropInit)
-  UIDropDownMenu_SetWidth(120, drop)
+  UIDropDownMenu_SetWidth(96, drop)
   UIDropDownMenu_SetText("Set Role...", drop)
   CB.roleDrop = drop
+
+  -- Right: available bots (/who) - scrollable, click a name to invite.
+  local rx = 306
+  CB.availHeader = body:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  CB.availHeader:SetPoint("TOPLEFT", body, "TOPLEFT", rx, -2)
+  CB.availHeader:SetText("Available (0)")
+
+  local rescan = CreateFrame("Button", nil, body, "UIPanelButtonTemplate")
+  rescan:SetWidth(60); rescan:SetHeight(18)
+  rescan:SetPoint("TOPRIGHT", body, "TOPRIGHT", 0, -1)
+  rescan:SetText("Rescan")
+  rescan:SetScript("OnClick", function() CB.ScanWho() end)
+
+  local ap = CreateFrame("Frame", nil, body)
+  ap:SetPoint("TOPLEFT", body, "TOPLEFT", rx, -22)
+  ap:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", 0, 4)
+  ap:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16,
+    edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+  ap:SetBackdropColor(0, 0, 0, 0.4)
+  CB.availPane = ap
+
+  local scroll = CreateFrame("ScrollFrame", "CleanBotVAvailScroll", ap, "FauxScrollFrameTemplate")
+  scroll:SetPoint("TOPLEFT", ap, "TOPLEFT", 5, -5)
+  scroll:SetPoint("BOTTOMRIGHT", ap, "BOTTOMRIGHT", -26, 5)
+  scroll:SetScript("OnVerticalScroll", function()
+    FauxScrollFrame_OnVerticalScroll(AVAIL_ROW_H, function() CB.RefreshAvailable() end)
+  end)
+  CB.availScroll = scroll
+
+  CB.availRows = {}
+  local line
+  for line = 1, AVAIL_VISIBLE do
+    local row = CreateFrame("Button", nil, ap)
+    row:SetHeight(AVAIL_ROW_H)
+    row:SetPoint("TOPLEFT", scroll, "TOPLEFT", 0, -(line - 1) * AVAIL_ROW_H)
+    row:SetPoint("RIGHT", scroll, "RIGHT", 0, 0)
+    row.lvl = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row.lvl:SetPoint("LEFT", row, "LEFT", 3, 0); row.lvl:SetWidth(20)
+    row.cico = row:CreateTexture(nil, "OVERLAY")
+    row.cico:SetWidth(12); row.cico:SetHeight(12); row.cico:SetPoint("LEFT", row, "LEFT", 24, 0)
+    row.txt = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row.txt:SetPoint("LEFT", row, "LEFT", 40, 0); row.txt:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+    row.txt:SetJustifyH("LEFT")
+    row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+    row:SetScript("OnClick", OnAvailClick)
+    row:Hide()
+    CB.availRows[line] = row
+  end
 end
 
 local function BuildPlaceholder(body, text)
