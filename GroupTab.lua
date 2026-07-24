@@ -103,6 +103,103 @@ local function DoAction(spec)
 end
 
 --------------------------------------------------------------------------------
+-- Recruit: /who available playerbots (+-5 levels), invite by name
+--------------------------------------------------------------------------------
+
+local LOCALIZED_TO_TOKEN = {
+  Warrior = "WARRIOR", Mage = "MAGE", Rogue = "ROGUE", Druid = "DRUID",
+  Hunter = "HUNTER", Shaman = "SHAMAN", Priest = "PRIEST",
+  Warlock = "WARLOCK", Paladin = "PALADIN",
+}
+
+CB.available = {}
+local scanPending = false
+
+local function InPartyByName(name)
+  local i, n = nil, GetNumRaidMembers()
+  if n > 0 then
+    for i = 1, n do if UnitName("raid" .. i) == name then return true end end
+  else
+    n = GetNumPartyMembers()
+    for i = 1, n do if UnitName("party" .. i) == name then return true end end
+  end
+  return name == UnitName("player")
+end
+
+function CB.ScanWho()
+  if scanPending then return end
+  local lvl = UnitLevel("player") or 1
+  local lo = lvl - 5; if lo < 1 then lo = 1 end
+  scanPending = true
+  SetWhoToUI(1)
+  SendWho(lo .. "-" .. (lvl + 5))
+end
+
+function CB.OnWhoUpdate()
+  if not scanPending then return end
+  scanPending = false
+  CB.available = {}
+  local n = GetNumWhoResults()
+  local i
+  for i = 1, n do
+    local name, _, level, _, classLoc = GetWhoInfo(i)
+    if name and not InPartyByName(name) then
+      table.insert(CB.available, { name = name, level = level or 0, class = LOCALIZED_TO_TOKEN[classLoc] })
+    end
+  end
+  SetWhoToUI(0)
+  table.sort(CB.available, function(a, b) return a.level < b.level end)
+  CB.RefreshAvailable()
+end
+
+local function OnAvailClick()
+  if this.botName then
+    InviteByName(this.botName)
+    if CB.SetStatus then CB.SetStatus("invited " .. this.botName) end
+  end
+end
+
+function CB.RefreshAvailable()
+  if not CB.availRows then return end
+  local i
+  for i = 1, table.getn(CB.availRows) do CB.availRows[i]:Hide() end
+  for i = 1, table.getn(CB.available) do
+    local b = CB.available[i]
+    local row = CB.availRows[i]
+    if not row then
+      row = CreateFrame("Button", nil, CB.availPane)
+      row:SetWidth(232); row:SetHeight(16)
+      row:SetPoint("TOPLEFT", CB.availPane, "TOPLEFT", 2, -2 - (i - 1) * 16)
+      row.lvl = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+      row.lvl:SetPoint("LEFT", row, "LEFT", 3, 0); row.lvl:SetWidth(22)
+      row.cico = row:CreateTexture(nil, "OVERLAY")
+      row.cico:SetWidth(12); row.cico:SetHeight(12); row.cico:SetPoint("LEFT", row, "LEFT", 26, 0)
+      row.txt = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+      row.txt:SetPoint("LEFT", row, "LEFT", 44, 0); row.txt:SetWidth(180); row.txt:SetJustifyH("LEFT")
+      row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+      row:SetScript("OnClick", OnAvailClick)
+      CB.availRows[i] = row
+    end
+    row.botName = b.name
+    row.lvl:SetText("|cffffd200" .. b.level .. "|r")
+    row.txt:SetText(b.name)
+    local rr, gg, bb = ClassColor(b.class)
+    row.txt:SetTextColor(rr, gg, bb)
+    local coords = b.class and CLASS_ICON_COORDS[b.class]
+    if coords then
+      row.cico:SetTexture(CLASS_ICON_TEX)
+      row.cico:SetTexCoord(coords[1], coords[2], coords[3], coords[4]); row.cico:Show()
+    else
+      row.cico:Hide()
+    end
+    row:Show()
+  end
+  if CB.availHeader then
+    CB.availHeader:SetText("Available (" .. table.getn(CB.available) .. ") - click to invite")
+  end
+end
+
+--------------------------------------------------------------------------------
 -- Tab switching
 --------------------------------------------------------------------------------
 
@@ -118,7 +215,7 @@ function CB.SelectTab(name)
       if t == name then CB.tabButton[t]:LockHighlight() else CB.tabButton[t]:UnlockHighlight() end
     end
   end
-  if name == "Group" then CB.RefreshGroup() end
+  if name == "Group" then CB.RefreshGroup(); CB.ScanWho() end
 end
 
 --------------------------------------------------------------------------------
@@ -305,26 +402,26 @@ local function BuildGroupBody(body)
   UIDropDownMenu_SetText("Set Role...", drop)
   CB.roleDrop = drop
 
-  local actLabel = body:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  actLabel:SetPoint("TOPLEFT", body, "TOPLEFT", rx, -100)
-  actLabel:SetText("Actions (all party bots):")
+  -- Available bots (/who +-5 levels) - click a name to invite.
+  CB.availHeader = body:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  CB.availHeader:SetPoint("TOPLEFT", body, "TOPLEFT", rx, -98)
+  CB.availHeader:SetText("Available - click to invite")
 
-  local i
-  for i = 1, table.getn(ACTIONS) do
-    local spec = ACTIONS[i]
-    local btn = CreateFrame("Button", nil, body, "UIPanelButtonTemplate")
-    btn:SetWidth(120); btn:SetHeight(22)
-    local col = math.mod and math.mod(i - 1, 2) or ((i - 1) - math.floor((i - 1) / 2) * 2)
-    local row = math.floor((i - 1) / 2)
-    btn:SetPoint("TOPLEFT", body, "TOPLEFT", rx + col * 126, -118 - row * 26)
-    btn:SetText(spec.label)
-    btn:SetScript("OnClick", function() DoAction(spec) end)
-  end
+  local rescan = CreateFrame("Button", nil, body, "UIPanelButtonTemplate")
+  rescan:SetWidth(58); rescan:SetHeight(18)
+  rescan:SetPoint("TOPLEFT", body, "TOPLEFT", rx + 186, -96)
+  rescan:SetText("Rescan")
+  rescan:SetScript("OnClick", function() CB.ScanWho() end)
 
-  local note = body:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  note:SetPoint("BOTTOMLEFT", body, "BOTTOMLEFT", rx, 6)
-  note:SetWidth(250); note:SetJustifyH("LEFT")
-  note:SetText("This server has no strategy/movement commands, so only the actions above are available.")
+  local ap = CreateFrame("Frame", nil, body)
+  ap:SetPoint("TOPLEFT", body, "TOPLEFT", rx, -116)
+  ap:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", -2, 4)
+  ap:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16,
+    edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+  ap:SetBackdropColor(0, 0, 0, 0.4)
+  CB.availPane = ap
+  CB.availRows = {}
 end
 
 local function BuildPlaceholder(body, text)
@@ -398,7 +495,10 @@ function CB.BuildGroup()  -- name kept for Core/minimap compatibility
   -- Roster refresh events (only act while the Group tab is visible).
   w:RegisterEvent("PARTY_MEMBERS_CHANGED")
   w:RegisterEvent("RAID_ROSTER_UPDATE")
-  w:SetScript("OnEvent", function() CB.RefreshGroup() end)
+  w:RegisterEvent("WHO_LIST_UPDATE")
+  w:SetScript("OnEvent", function()
+    if event == "WHO_LIST_UPDATE" then CB.OnWhoUpdate() else CB.RefreshGroup() end
+  end)
   w.elapsed = 0
   w:SetScript("OnUpdate", function()
     w.elapsed = w.elapsed + arg1
