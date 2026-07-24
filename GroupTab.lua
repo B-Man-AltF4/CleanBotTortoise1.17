@@ -81,9 +81,9 @@ end
 
 -- LFG-style role icon per stored role (shield=tank, +=healer, sword=dps).
 local ROLE_ICON = {
-  tank   = "Interface\\AddOns\\CleanBotV\\icons\\attack_tank",
-  healer = "Interface\\AddOns\\CleanBotV\\icons\\attack_healer",
-  dps    = "Interface\\AddOns\\CleanBotV\\icons\\attack_dps",
+  tank   = "Interface\\Icons\\INV_Shield_06",
+  healer = "Interface\\Icons\\Spell_ChargePositive",
+  dps    = "Interface\\Icons\\INV_Sword_04",
 }
 
 -- Class icons: WoW's class atlas + CleanBot's tex-coord table.
@@ -166,61 +166,67 @@ function CB.RefreshGroup()
     fb:Show()
   end
 
-  -- Middle bot list, filtered.
-  for i = 1, table.getn(CB.botRows) do CB.botRows[i]:Hide() end
-  local shown = 0
+  -- Middle bot list: Lvl | Class | Name, filtered and sorted by level.
+  local list = {}
   for i = 1, table.getn(units) do
-    local unit = units[i]
-    local _, cls = UnitClass(unit)
+    local _, cls = UnitClass(units[i])
     if CB.groupFilter == "All" or CB.groupFilter == cls then
-      shown = shown + 1
-      local row = CB.botRows[shown]
-      if not row then
-        row = CreateFrame("Button", nil, CB.botPane)
-        row:SetWidth(150); row:SetHeight(18)
-        row:SetPoint("TOPLEFT", CB.botPane, "TOPLEFT", 2, -2 - (shown - 1) * 18)
-        row.roleIcon = row:CreateTexture(nil, "OVERLAY")
-        row.roleIcon:SetWidth(14); row.roleIcon:SetHeight(14)
-        row.roleIcon:SetPoint("LEFT", row, "LEFT", 3, 0)
-        row.roleIcon:Hide()
-        row.classIcon = row:CreateTexture(nil, "OVERLAY")
-        row.classIcon:SetWidth(14); row.classIcon:SetHeight(14)
-        row.classIcon:SetPoint("RIGHT", row, "RIGHT", -4, 0)
-        row.classIcon:Hide()
-        row.txt = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        row.txt:SetPoint("LEFT", row, "LEFT", 20, 0)
-        row.txt:SetWidth(102); row.txt:SetJustifyH("LEFT")
-        row.hl = row:CreateTexture(nil, "BACKGROUND")
-        row.hl:SetAllPoints(row); row.hl:SetTexture(0.3, 0.5, 0.9, 0.3); row.hl:Hide()
-        row:SetScript("OnClick", function()
-          CB.selectedBotUnit = row.unit
-          CB.RefreshGroup()
-        end)
-        CB.botRows[shown] = row
-      end
-      row:ClearAllPoints()
-      row:SetPoint("TOPLEFT", CB.botPane, "TOPLEFT", 2, -2 - (shown - 1) * 18)
-      row.unit = unit
-      local r, g, b = ClassColor(cls)
-      row.txt:SetText((UnitName(unit) or "?") .. " |cff808080L" .. (UnitLevel(unit) or "?") .. "|r")
-      row.txt:SetTextColor(r, g, b)
-      local role = CB.db.botRoles and CB.db.botRoles[UnitName(unit)]
-      if role and ROLE_ICON[role] then
-        row.roleIcon:SetTexture(ROLE_ICON[role]); row.roleIcon:Show()
-      else
-        row.roleIcon:Hide()
-      end
-      local coords = cls and CLASS_ICON_COORDS[cls]
-      if coords then
-        row.classIcon:SetTexture(CLASS_ICON_TEX)
-        row.classIcon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
-        row.classIcon:Show()
-      else
-        row.classIcon:Hide()
-      end
-      if CB.selectedBotUnit == unit then row.hl:Show() else row.hl:Hide() end
-      row:Show()
+      table.insert(list, units[i])
     end
+  end
+  table.sort(list, function(a, b) return (UnitLevel(a) or 0) < (UnitLevel(b) or 0) end)
+
+  for i = 1, table.getn(CB.botRows) do CB.botRows[i]:Hide() end
+  for i = 1, table.getn(list) do
+    local unit = list[i]
+    local _, cls = UnitClass(unit)
+    local row = CB.botRows[i]
+    if not row then
+      row = CreateFrame("Button", nil, CB.botPane)
+      row:SetWidth(150); row:SetHeight(18)
+      row.roleIcon = row:CreateTexture(nil, "OVERLAY")
+      row.roleIcon:SetWidth(12); row.roleIcon:SetHeight(12)
+      row.roleIcon:SetPoint("LEFT", row, "LEFT", 1, 0)
+      row.roleIcon:Hide()
+      row.lvl = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+      row.lvl:SetPoint("LEFT", row, "LEFT", 15, 0); row.lvl:SetWidth(22); row.lvl:SetJustifyH("LEFT")
+      row.classIcon = row:CreateTexture(nil, "OVERLAY")
+      row.classIcon:SetWidth(14); row.classIcon:SetHeight(14)
+      row.classIcon:SetPoint("LEFT", row, "LEFT", 40, 0)
+      row.classIcon:Hide()
+      row.txt = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+      row.txt:SetPoint("LEFT", row, "LEFT", 58, 0); row.txt:SetWidth(88); row.txt:SetJustifyH("LEFT")
+      row.hl = row:CreateTexture(nil, "BACKGROUND")
+      row.hl:SetAllPoints(row); row.hl:SetTexture(0.3, 0.5, 0.9, 0.3); row.hl:Hide()
+      row:SetScript("OnClick", function()
+        CB.selectedBotUnit = row.unit
+        CB.RefreshGroup()
+      end)
+      CB.botRows[i] = row
+    end
+    row:ClearAllPoints()
+    row:SetPoint("TOPLEFT", CB.botPane, "TOPLEFT", 2, -20 - (i - 1) * 18)
+    row.unit = unit
+    local r, g, b = ClassColor(cls)
+    row.lvl:SetText("|cffffd200" .. (UnitLevel(unit) or "?") .. "|r")
+    row.txt:SetText(UnitName(unit) or "?")
+    row.txt:SetTextColor(r, g, b)
+    local role = CB.db.botRoles and CB.db.botRoles[UnitName(unit)]
+    if role and ROLE_ICON[role] then
+      row.roleIcon:SetTexture(ROLE_ICON[role]); row.roleIcon:Show()
+    else
+      row.roleIcon:Hide()
+    end
+    local coords = cls and CLASS_ICON_COORDS[cls]
+    if coords then
+      row.classIcon:SetTexture(CLASS_ICON_TEX)
+      row.classIcon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+      row.classIcon:Show()
+    else
+      row.classIcon:Hide()
+    end
+    if CB.selectedBotUnit == unit then row.hl:Show() else row.hl:Hide() end
+    row:Show()
   end
 
   CB.groupHeader:SetText("Managing: " .. table.getn(units) .. " bot" .. (table.getn(units) == 1 and "" or "s"))
@@ -269,6 +275,14 @@ local function BuildGroupBody(body)
   bp:SetBackdropColor(0, 0, 0, 0.4)
   CB.botPane = bp
   CB.botRows = {}
+
+  -- Column header: Lvl | Class | Name
+  local hLvl = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  hLvl:SetPoint("TOPLEFT", bp, "TOPLEFT", 15, -4); hLvl:SetText("|cffffffffLvl|r")
+  local hClass = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  hClass:SetPoint("TOPLEFT", bp, "TOPLEFT", 38, -4); hClass:SetText("|cffffffffCls|r")
+  local hName = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  hName:SetPoint("TOPLEFT", bp, "TOPLEFT", 58, -4); hName:SetText("|cffffffffName|r")
 
   -- Right: controls.
   local rx = 304
