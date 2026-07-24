@@ -79,6 +79,15 @@ function CB.SetBotRole(unit, role)
   CB.RefreshGroup()
 end
 
+-- Clear the (client-side) role assignment for a bot - removes its role icon.
+function CB.ClearBotRole(unit)
+  if not unit or not UnitExists(unit) then return end
+  CB.db.botRoles = CB.db.botRoles or {}
+  CB.db.botRoles[UnitName(unit)] = nil
+  if CB.SetStatus then CB.SetStatus("cleared role -> " .. (UnitName(unit) or "?")) end
+  CB.RefreshGroup()
+end
+
 -- LFG-style role icon per stored role (shield=tank, +=healer, sword=dps).
 local ROLE_ICON = {
   tank   = "Interface\\Icons\\INV_Shield_06",
@@ -176,6 +185,8 @@ end
 
 function CB.OnWhoUpdate()
   if not scanPending then return end
+  -- Our SetWhoToUI(1) query opens the Who UI; close it since we read it silently.
+  if FriendsFrame and FriendsFrame:IsShown() then HideUIPanel(FriendsFrame) end
   -- Zone query returned nothing -> fall back to a +-3 level range.
   if scanStage == 1 and GetNumWhoResults() == 0 then
     scanStage = 2
@@ -348,6 +359,15 @@ local function RoleDropInit()
     end
     UIDropDownMenu_AddButton(info)
   end
+
+  local clr = {}
+  clr.text = "Clear Role"
+  clr.notCheckable = 1
+  clr.func = function()
+    UIDropDownMenu_SetText("Set Role...", CB.roleDrop)
+    CB.ClearBotRole(CB.selectedBotUnit)
+  end
+  UIDropDownMenu_AddButton(clr)
 end
 
 local function BuildGroupBody(body)
