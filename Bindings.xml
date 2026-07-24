@@ -1,13 +1,13 @@
 <Bindings>
-  <Binding name="CLEANBOTV_COMETOME" header="CLEANBOTV">CleanBotV.Bot("cometome")</Binding>
-  <Binding name="CLEANBOTV_ATTACK">CleanBotV.Bot("attackstart")</Binding>
-  <Binding name="CLEANBOTV_STOP">CleanBotV.Bot("attackstop")</Binding>
-  <Binding name="CLEANBOTV_PULL">CleanBotV.Bot("pull")</Binding>
-  <Binding name="CLEANBOTV_AOE">CleanBotV.Bot("aoe")</Binding>
-  <Binding name="CLEANBOTV_FOCUS">CleanBotV.BotMark(8, "focusmark")</Binding>
-  <Binding name="CLEANBOTV_CC">CleanBotV.BotMark(7, "ccmark")</Binding>
-  <Binding name="CLEANBOTV_CLEARMARKS">CleanBotV.BotClearMarks()</Binding>
-  <Binding name="CLEANBOTV_PAUSE">CleanBotV.Bot("pause")</Binding>
-  <Binding name="CLEANBOTV_UNPAUSE">CleanBotV.Bot("unpause")</Binding>
-  <Binding name="CLEANBOTV_USEOBJECT">CleanBotV.Bot("usegobject")</Binding>
+  <Binding name="CLEANBOTTORTUS_COMETOME" header="CLEANBOTTORTUS">CleanBotTortus.Bot("cometome")</Binding>
+  <Binding name="CLEANBOTTORTUS_ATTACK">CleanBotTortus.Bot("attackstart")</Binding>
+  <Binding name="CLEANBOTTORTUS_STOP">CleanBotTortus.Bot("attackstop")</Binding>
+  <Binding name="CLEANBOTTORTUS_PULL">CleanBotTortus.Bot("pull")</Binding>
+  <Binding name="CLEANBOTTORTUS_AOE">CleanBotTortus.Bot("aoe")</Binding>
+  <Binding name="CLEANBOTTORTUS_FOCUS">CleanBotTortus.BotMark(8, "focusmark")</Binding>
+  <Binding name="CLEANBOTTORTUS_CC">CleanBotTortus.BotMark(7, "ccmark")</Binding>
+  <Binding name="CLEANBOTTORTUS_CLEARMARKS">CleanBotTortus.BotClearMarks()</Binding>
+  <Binding name="CLEANBOTTORTUS_PAUSE">CleanBotTortus.Bot("pause")</Binding>
+  <Binding name="CLEANBOTTORTUS_UNPAUSE">CleanBotTortus.Bot("unpause")</Binding>
+  <Binding name="CLEANBOTTORTUS_USEOBJECT">CleanBotTortus.Bot("usegobject")</Binding>
 </Bindings>

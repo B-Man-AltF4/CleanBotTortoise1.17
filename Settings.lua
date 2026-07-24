@@ -3,10 +3,10 @@
      Vanilla 1.12 / Lua 5.0.
 ]]--
 
-local CB = CleanBotV
+local CB = CleanBotTortus
 
 -- Friendly names for the Blizzard Key Bindings menu (built from CB.BAR).
-BINDING_HEADER_CLEANBOTV = "CleanBot Turtle"
+BINDING_HEADER_CLEANBOTTORTUS = "CleanBotTortoise"
 do
   local i
   for i = 1, table.getn(CB.BAR) do
@@ -48,47 +48,27 @@ local function ClearBinding(bind)
   SaveBindings(GetCurrentBindingSet())
 end
 
+-- Opens the main window and switches it to the Settings tab (the settings
+-- controls live inline there now; see CB.BuildSettings below).
 function CB.ToggleSettings()
-  if not CB.settings then CB.BuildSettings() end
-  if CB.settings:IsShown() then
-    CB.settings:Hide()
-  else
-    CB.RefreshKeybinds()
-    CB.settings:Show()
-  end
+  if not CB.win then CB.BuildGroup() end
+  CB.win:Show()
+  CB.db.shown = true
+  CB.SelectTab("Settings")
 end
 
-function CB.BuildSettings()
-  if CB.settings then return end
+-- Builds the settings controls (orientation, show toggles, keybinds) directly
+-- into `parent`, which is the Settings tab body created in GroupTab.lua.
+function CB.BuildSettings(parent)
+  if CB.settingsBuilt then return end
+  CB.settingsBuilt = true
 
-  local f = CreateFrame("Frame", "CleanBotVSettings", UIParent)
-  f:SetWidth(300); f:SetHeight(380)
-  f:SetBackdrop({
-    bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile = true, tileSize = 16, edgeSize = 16,
-    insets = { left = 4, right = 4, top = 4, bottom = 4 },
-  })
-  f:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-  f:SetMovable(true); f:EnableMouse(true)
-  f:RegisterForDrag("LeftButton")
-  f:SetScript("OnDragStart", function() this:StartMoving() end)
-  f:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
-  f:SetFrameStrata("DIALOG")
-  f:Hide()
-
-  local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  title:SetPoint("TOP", f, "TOP", 0, -12)
-  title:SetText("CleanBot Turtle Settings")
-
-  local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -3, -3)
-  close:SetScript("OnClick", function() f:Hide() end)
+  local f = parent
 
   -- Orientation toggle.
   local orient = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   orient:SetWidth(200); orient:SetHeight(22)
-  orient:SetPoint("TOP", f, "TOP", 0, -34)
+  orient:SetPoint("TOP", f, "TOP", 0, -6)
   local function UpdateOrient()
     local o = (CB.db.barOrient == "VERTICAL") and "Vertical" or "Horizontal"
     orient:SetText("Bar Orientation: " .. o)
@@ -112,11 +92,11 @@ function CB.BuildSettings()
     return c
   end
 
-  MakeCheck(-64, "Show Action Bar",
+  MakeCheck(-36, "Show Action Bar",
     function() return CB.db.barShown end,
     function(v) if v then CB.bar:Show() else CB.bar:Hide() end; CB.db.barShown = v end)
 
-  MakeCheck(-88, "Show Command Panel",
+  MakeCheck(-60, "Show Command Panel",
     function() return CB.db.shown end,
     function(v)
       if CB.mainFrame then if v then CB.mainFrame:Show() else CB.mainFrame:Hide() end end
@@ -125,7 +105,7 @@ function CB.BuildSettings()
 
   -- Keybind section.
   local kbTitle = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  kbTitle:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -116)
+  kbTitle:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -88)
   kbTitle:SetText("Keybinds  (right-click Set to clear)")
 
   CB.keyRows = {}
@@ -133,7 +113,7 @@ function CB.BuildSettings()
   local i
   for i = 1, n do
     local spec = CB.BAR[i]
-    local y = -134 - (i - 1) * 20
+    local y = -106 - (i - 1) * 20
 
     local label = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     label:SetPoint("TOPLEFT", f, "TOPLEFT", 18, y)
@@ -146,7 +126,7 @@ function CB.BuildSettings()
 
     local set = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     set:SetWidth(48); set:SetHeight(16)
-    set:SetPoint("TOPRIGHT", f, "TOPRIGHT", -14, y + 2)
+    set:SetPoint("TOPLEFT", f, "TOPLEFT", 228, y + 2)
     set:SetText("Set")
     set.bind = spec.bind
     set.label = spec.tip
@@ -166,7 +146,7 @@ function CB.BuildSettings()
   end
 
   -- Fullscreen key-capture overlay.
-  local cap = CreateFrame("Frame", "CleanBotVKeyCapture", UIParent)
+  local cap = CreateFrame("Frame", "CleanBotTortusKeyCapture", UIParent)
   cap:SetAllPoints(UIParent)
   cap:SetFrameStrata("FULLSCREEN_DIALOG")
   cap:EnableKeyboard(true); cap:EnableMouse(true)
@@ -187,6 +167,5 @@ function CB.BuildSettings()
   CB.keyCapture = cap
   CB.keyPrompt = prompt
 
-  CB.settings = f
   CB.RefreshKeybinds()
 end

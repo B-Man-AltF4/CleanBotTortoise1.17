@@ -5,7 +5,7 @@
      Vanilla 1.12 / Lua 5.0.
 ]]--
 
-local CB = CleanBotV
+local CB = CleanBotTortus
 
 local TABS = { "Manage", "Individual", "Group", "Settings" }
 
@@ -288,6 +288,7 @@ function CB.SelectTab(name)
     end
   end
   if name == "Group" then CB.RefreshGroup(); CB.ScanWho() end
+  if name == "Settings" then CB.RefreshKeybinds() end
 end
 
 --------------------------------------------------------------------------------
@@ -428,7 +429,7 @@ local function BuildGroupBody(body)
   ap:SetBackdrop(BD); ap:SetBackdropColor(0, 0, 0, 0.4)
   CB.availPane = ap
 
-  local scroll = CreateFrame("ScrollFrame", "CleanBotVAvailScroll", ap, "FauxScrollFrameTemplate")
+  local scroll = CreateFrame("ScrollFrame", "CleanBotTortusAvailScroll", ap, "FauxScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", ap, "TOPLEFT", 5, -5)
   scroll:SetPoint("BOTTOMRIGHT", ap, "BOTTOMRIGHT", -26, 5)
   scroll:SetScript("OnVerticalScroll", function()
@@ -473,7 +474,7 @@ local function BuildGroupBody(body)
   roleLabel:SetPoint("TOPLEFT", body, "TOPLEFT", cx, -52)
   roleLabel:SetText("Role:")
 
-  local drop = CreateFrame("Frame", "CleanBotVRoleDrop", body, "UIDropDownMenuTemplate")
+  local drop = CreateFrame("Frame", "CleanBotTortusRoleDrop", body, "UIDropDownMenuTemplate")
   drop:SetPoint("TOPLEFT", body, "TOPLEFT", cx - 14, -64)
   UIDropDownMenu_Initialize(drop, RoleDropInit)
   UIDropDownMenu_SetWidth(96, drop)
@@ -488,7 +489,7 @@ local function BuildGroupBody(body)
   convert:Hide()
   CB.convertBtn = convert
 
-  -- Right: your Group / Raid bots (Lvl | Class | Name).
+  -- Right: your Group / Raid bots (Lvl | Name).
   local grx = 368
   local grLabel = body:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   grLabel:SetPoint("TOPLEFT", body, "TOPLEFT", grx + 2, -2)
@@ -502,12 +503,10 @@ local function BuildGroupBody(body)
 
   local hLvl = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   hLvl:SetPoint("TOPLEFT", bp, "TOPLEFT", 15, -4); hLvl:SetText("|cffffffffLvl|r")
-  local hClass = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  hClass:SetPoint("TOPLEFT", bp, "TOPLEFT", 38, -4); hClass:SetText("|cffffffffCls|r")
   local hName = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   hName:SetPoint("TOPLEFT", bp, "TOPLEFT", 58, -4); hName:SetText("|cffffffffName|r")
 
-  local gscroll = CreateFrame("ScrollFrame", "CleanBotVGroupScroll", bp, "FauxScrollFrameTemplate")
+  local gscroll = CreateFrame("ScrollFrame", "CleanBotTortusGroupScroll", bp, "FauxScrollFrameTemplate")
   gscroll:SetPoint("TOPLEFT", bp, "TOPLEFT", 2, -20)
   gscroll:SetPoint("BOTTOMRIGHT", bp, "BOTTOMRIGHT", -24, 4)
   gscroll:SetScript("OnVerticalScroll", function()
@@ -547,6 +546,14 @@ local function BuildGroupBody(body)
       end
       CB.RefreshGroup()
     end)
+    row:SetScript("OnDoubleClick", function()
+      local name = row.unit and UnitName(row.unit)
+      if not name then return end
+      UninviteUnit(name)
+      CB.selectedBots[name] = nil
+      if CB.SetStatus then CB.SetStatus("removed " .. name .. " from group") end
+      CB.RefreshGroup()
+    end)
     row:Hide()
     CB.botRows[line] = row
   end
@@ -562,7 +569,7 @@ end
 function CB.BuildGroup()  -- name kept for Core/minimap compatibility
   if CB.win then return end
 
-  local w = CreateFrame("Frame", "CleanBotVWindow", UIParent)
+  local w = CreateFrame("Frame", "CleanBotTortusWindow", UIParent)
   w:SetWidth(580); w:SetHeight(432)
   w:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16,
@@ -581,7 +588,7 @@ function CB.BuildGroup()  -- name kept for Core/minimap compatibility
 
   local title = w:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   title:SetPoint("TOP", w, "TOP", 0, -12)
-  title:SetText("CleanBot Turtle")
+  title:SetText("CleanBotTortoise")
 
   local close = CreateFrame("Button", nil, w, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", w, "TOPRIGHT", -4, -4)
@@ -607,18 +614,28 @@ function CB.BuildGroup()  -- name kept for Core/minimap compatibility
     CB.tabBody[name] = body
   end
 
-  BuildGroupBody(CB.tabBody["Group"])
-  BuildPlaceholder(CB.tabBody["Manage"], "Group management (create/rename bot groups) - coming soon.")
-  BuildPlaceholder(CB.tabBody["Individual"], "Per-bot controls - coming soon.\nUse the Group tab's Role dropdown for now.")
-  do
-    local sbody = CB.tabBody["Settings"]
-    BuildPlaceholder(sbody, "Bar orientation, show toggles and keybinds\nare in the standalone Settings window.")
-    local ob = CreateFrame("Button", nil, sbody, "UIPanelButtonTemplate")
-    ob:SetWidth(160); ob:SetHeight(24)
-    ob:SetPoint("TOP", sbody, "TOP", 0, -90)
-    ob:SetText("Open Settings")
-    ob:SetScript("OnClick", function() CB.ToggleSettings() end)
+  -- Each tab builds independently: a bug in one tab's builder must not stop
+  -- this function short of `CB.win = w` below, or the whole window (every
+  -- entry point: minimap menu, /cbv, Settings, Party Bot Roster) breaks.
+  local function SafeBuild(label, fn)
+    local ok, err = pcall(fn)
+    if not ok then
+      CB.Print("|cffff5555" .. label .. " tab failed to build: " .. tostring(err) .. "|r")
+    end
   end
+
+  SafeBuild("Group", function() BuildGroupBody(CB.tabBody["Group"]) end)
+  SafeBuild("Manage", function()
+    BuildPlaceholder(CB.tabBody["Manage"],
+      "Group management (create/rename bot groups) - coming soon.\n" ..
+      "|cff808080Requires a server-side change to bring offline bots online.|r")
+  end)
+  SafeBuild("Individual", function()
+    BuildPlaceholder(CB.tabBody["Individual"],
+      "Per-bot controls - coming soon.\nUse the Group tab's Role dropdown for now.\n" ..
+      "|cff808080Requires a server-side change for inventory / quest management.|r")
+  end)
+  SafeBuild("Settings", function() CB.BuildSettings(CB.tabBody["Settings"]) end)
 
   -- Roster refresh events (only act while the Group tab is visible).
   w:RegisterEvent("PARTY_MEMBERS_CHANGED")

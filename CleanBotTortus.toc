@@ -1,9 +1,9 @@
 ## Interface: 11200
-## Title: CleanBot Vanilla
+## Title: CleanBotTortoise
 ## Notes: Party-bot command center for vanilla 1.12 (Turtle WoW) via the .bot command.
 ## Author: B-Man-AltF4
 ## Version: 0.16
-## SavedVariables: CleanBotVDB
+## SavedVariables: CleanBotTortusDB
 
 Core.lua
 Bridge.lua

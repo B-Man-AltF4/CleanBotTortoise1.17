@@ -3,7 +3,7 @@
      Every button routes through Bridge.lua (CB.Bot / CB.BotMark / CB.BotClearMarks).
 ]]--
 
-local CB = CleanBotV
+local CB = CleanBotTortus
 
 -- Button grid (first 10 fill two columns; #11 spans full width).
 --   kind "cmd"        -> CB.Bot(arg)
@@ -48,11 +48,11 @@ local function OnButtonClick()
 end
 
 -- Minimap dropdown menu (rebuilt each open, so checks reflect current state).
-local function CleanBotVMenuInit()
+local function CleanBotTortusMenuInit()
   local info
 
   info = {}
-  info.text = "CleanBot Turtle"; info.isTitle = 1; info.notCheckable = 1
+  info.text = "CleanBotTortoise"; info.isTitle = 1; info.notCheckable = 1
   UIDropDownMenu_AddButton(info)
 
   info = {}
@@ -81,7 +81,7 @@ end
 local function BuildMinimapButton()
   if CB.minimapButton then return end
 
-  local b = CreateFrame("Button", "CleanBotVMinimapButton", Minimap)
+  local b = CreateFrame("Button", "CleanBotTortusMinimapButton", Minimap)
   b:SetWidth(31); b:SetHeight(31)
   b:SetFrameStrata("MEDIUM"); b:SetFrameLevel(8)
 
@@ -98,18 +98,18 @@ local function BuildMinimapButton()
   local angle = math.rad(CB.db.minimapAngle or 200)
   b:SetPoint("CENTER", Minimap, "CENTER", 80 * math.cos(angle), 80 * math.sin(angle))
 
-  if not CleanBotVMenu then
-    local menu = CreateFrame("Frame", "CleanBotVMenu", UIParent, "UIDropDownMenuTemplate")
-    UIDropDownMenu_Initialize(menu, CleanBotVMenuInit, "MENU")
+  if not CleanBotTortusMenu then
+    local menu = CreateFrame("Frame", "CleanBotTortusMenu", UIParent, "UIDropDownMenuTemplate")
+    UIDropDownMenu_Initialize(menu, CleanBotTortusMenuInit, "MENU")
   end
 
   b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   b:SetScript("OnClick", function()
-    ToggleDropDownMenu(1, nil, CleanBotVMenu, "cursor", 0, 0)
+    ToggleDropDownMenu(1, nil, CleanBotTortusMenu, "cursor", 0, 0)
   end)
   b:SetScript("OnEnter", function()
     GameTooltip:SetOwner(this, "ANCHOR_LEFT")
-    GameTooltip:AddLine("CleanBot Turtle - Party Bots")
+    GameTooltip:AddLine("CleanBotTortoise - Party Bots")
     GameTooltip:AddLine("Click for menu", 1, 1, 1)
     GameTooltip:Show()
   end)
@@ -124,7 +124,7 @@ function CB.BuildUI()
   local BW, BH, GAP, TOP = 102, 22, 6, -30
   local ROW = BH + GAP
 
-  local f = CreateFrame("Frame", "CleanBotVFrame", UIParent)
+  local f = CreateFrame("Frame", "CleanBotTortusFrame", UIParent)
   f:SetWidth(236); f:SetHeight(238)
   f:SetBackdrop({
     bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
@@ -146,7 +146,7 @@ function CB.BuildUI()
 
   local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   title:SetPoint("TOP", f, "TOP", 0, -10)
-  title:SetText("CleanBot Turtle - Party Bots")
+  title:SetText("CleanBotTortoise - Party Bots")
 
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -2, -2)

@@ -4,23 +4,23 @@
      Vanilla 1.12 / Lua 5.0.
 ]]--
 
-local CB = CleanBotV
+local CB = CleanBotTortus
 
 local SIZE, GAP, PAD, GRIP = 28, 2, 5, 12
 
 -- Single source of truth for the command set (bar icons + keybind rows).
 CB.BAR = {
-  { cmd = "cometome",    tip = "Come to Me",     tex = "Interface\\Icons\\Spell_Nature_Swiftness",     bind = "CLEANBOTV_COMETOME" },
-  { cmd = "attackstart", tip = "Attack target",  tex = "Interface\\Icons\\Ability_Warrior_Charge",     bind = "CLEANBOTV_ATTACK" },
-  { cmd = "attackstop",  tip = "Stop attacking", tex = "Interface\\Icons\\Ability_Warrior_ShieldWall", bind = "CLEANBOTV_STOP" },
-  { cmd = "pull",        tip = "Pull target",    tex = "Interface\\Icons\\Ability_Marksmanship",       bind = "CLEANBOTV_PULL" },
-  { cmd = "aoe",         tip = "AoE",            tex = "Interface\\Icons\\Spell_Nature_StarFall",      bind = "CLEANBOTV_AOE" },
-  { cmd = "focusmark", mark = 8, tip = "Focus (Skull)", tex = "Interface\\Icons\\Ability_Hunter_AimedShot", bind = "CLEANBOTV_FOCUS" },
-  { cmd = "ccmark",    mark = 7, tip = "CC (Cross)",    tex = "Interface\\Icons\\Spell_Nature_Polymorph",   bind = "CLEANBOTV_CC" },
-  { clear = true,      tip = "Clear Marks",     tex = "Interface\\Buttons\\UI-GroupLoot-Pass-Up",     bind = "CLEANBOTV_CLEARMARKS" },
-  { cmd = "pause",       tip = "Pause",          tex = "Interface\\Icons\\INV_Misc_PocketWatch_01",    bind = "CLEANBOTV_PAUSE" },
-  { cmd = "unpause",     tip = "Unpause",        tex = "Interface\\Icons\\Spell_Holy_Renew",           bind = "CLEANBOTV_UNPAUSE" },
-  { cmd = "usegobject",  tip = "Use Object",     tex = "Interface\\Icons\\INV_Misc_Gear_01",           bind = "CLEANBOTV_USEOBJECT" },
+  { cmd = "cometome",    tip = "Come to Me",     tex = "Interface\\Icons\\Spell_Nature_Swiftness",     bind = "CLEANBOTTORTUS_COMETOME" },
+  { cmd = "attackstart", tip = "Attack target",  tex = "Interface\\Icons\\Ability_Warrior_Charge",     bind = "CLEANBOTTORTUS_ATTACK" },
+  { cmd = "attackstop",  tip = "Stop attacking", tex = "Interface\\Icons\\Ability_Warrior_ShieldWall", bind = "CLEANBOTTORTUS_STOP" },
+  { cmd = "pull",        tip = "Pull target",    tex = "Interface\\Icons\\Ability_Marksmanship",       bind = "CLEANBOTTORTUS_PULL" },
+  { cmd = "aoe",         tip = "AoE",            tex = "Interface\\Icons\\Spell_Nature_StarFall",      bind = "CLEANBOTTORTUS_AOE" },
+  { cmd = "focusmark", mark = 8, tip = "Focus (Skull)", tex = "Interface\\Icons\\Ability_Hunter_AimedShot", bind = "CLEANBOTTORTUS_FOCUS" },
+  { cmd = "ccmark",    mark = 7, tip = "CC (Cross)",    tex = "Interface\\Icons\\Spell_Nature_Polymorph",   bind = "CLEANBOTTORTUS_CC" },
+  { clear = true,      tip = "Clear Marks",     tex = "Interface\\Buttons\\UI-GroupLoot-Pass-Up",     bind = "CLEANBOTTORTUS_CLEARMARKS" },
+  { cmd = "pause",       tip = "Pause",          tex = "Interface\\Icons\\INV_Misc_PocketWatch_01",    bind = "CLEANBOTTORTUS_PAUSE" },
+  { cmd = "unpause",     tip = "Unpause",        tex = "Interface\\Icons\\Spell_Holy_Renew",           bind = "CLEANBOTTORTUS_UNPAUSE" },
+  { cmd = "usegobject",  tip = "Use Object",     tex = "Interface\\Icons\\INV_Misc_Gear_01",           bind = "CLEANBOTTORTUS_USEOBJECT" },
 }
 
 local function OnBarClick()
@@ -94,7 +94,7 @@ end
 function CB.BuildActionBar()
   if CB.bar then return end
 
-  local bar = CreateFrame("Frame", "CleanBotVBar", UIParent)
+  local bar = CreateFrame("Frame", "CleanBotTortusBar", UIParent)
   bar:SetBackdrop({
     bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -122,7 +122,7 @@ function CB.BuildActionBar()
   CB.barButtons = {}
   for i = 1, table.getn(CB.BAR) do
     local spec = CB.BAR[i]
-    local btn = CreateFrame("Button", "CleanBotVBarButton" .. i, bar)
+    local btn = CreateFrame("Button", "CleanBotTortusBarButton" .. i, bar)
     btn:SetWidth(SIZE); btn:SetHeight(SIZE)
     btn:SetNormalTexture(spec.tex)
     btn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
