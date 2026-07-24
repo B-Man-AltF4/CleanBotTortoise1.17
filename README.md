@@ -1,7 +1,7 @@
 # CleanBotTortoise1.17
 This is a simple addon controlling bots on Tortoise 1.17 repack
 
-Requirement 1: Tortoise / Turttle 1.17 repack with playerbots
+Requirement 1: Tortoise / Turtle 1.17 repack with playerbots (https://www.mediafire.com/file/jy1v1hv1sezjfz2/TWOW_1.17.2_repack_with_playerbots.rar/file) link might not work
 Requirement 2:This addon works throgh .bot commands, so if .bot command does not work then this addon will not work 
 
 Place addon file in /Addons/CleanBotTortoise
