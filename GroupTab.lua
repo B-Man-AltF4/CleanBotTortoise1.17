@@ -65,26 +65,54 @@ local function ClassColor(class)
   return 1, 1, 1
 end
 
-function CB.SetBotRole(unit, role)
-  if not unit or not UnitExists(unit) then
-    CB.Print("|cffff5555Select a bot first.|r")
-    return
-  end
+-- unit-level primitive: sends the real command. skipRefresh lets batch callers
+-- (ApplyRoleToSelected) avoid redrawing the list after every single bot.
+function CB.SetBotRole(unit, role, skipRefresh)
+  if not unit or not UnitExists(unit) then return end
   TargetUnit(unit)
   SendChatMessage(".bot setrole " .. role, "SAY")
   TargetLastTarget()
   CB.db.botRoles = CB.db.botRoles or {}
   CB.db.botRoles[UnitName(unit)] = role
-  if CB.SetStatus then CB.SetStatus("setrole " .. role .. " -> " .. (UnitName(unit) or "?")) end
+  if not skipRefresh then CB.RefreshGroup() end
+end
+
+-- Apply a role to every currently selected bot (shift-click multi-select).
+function CB.ApplyRoleToSelected(role)
+  local units = BotUnits()
+  local i, count = 1, 0
+  for i = 1, table.getn(units) do
+    local name = UnitName(units[i])
+    if name and CB.selectedBots[name] then
+      CB.SetBotRole(units[i], role, true)
+      count = count + 1
+    end
+  end
+  if count == 0 then
+    CB.Print("|cffff5555Select at least one bot first (click a row; shift-click for more).|r")
+  else
+    if CB.SetStatus then CB.SetStatus("setrole " .. role .. " -> " .. count .. " bot(s)") end
+  end
   CB.RefreshGroup()
 end
 
--- Clear the (client-side) role assignment for a bot - removes its role icon.
-function CB.ClearBotRole(unit)
-  if not unit or not UnitExists(unit) then return end
+-- Clear the (client-side) role for every selected bot.
+function CB.ClearSelectedRoles()
   CB.db.botRoles = CB.db.botRoles or {}
-  CB.db.botRoles[UnitName(unit)] = nil
-  if CB.SetStatus then CB.SetStatus("cleared role -> " .. (UnitName(unit) or "?")) end
+  local name
+  local count = 0
+  for name in pairs(CB.selectedBots) do
+    CB.db.botRoles[name] = nil
+    count = count + 1
+  end
+  if CB.SetStatus then CB.SetStatus("cleared role -> " .. count .. " bot(s)") end
+  CB.RefreshGroup()
+end
+
+-- Clear the (client-side) role for every bot, selected or not.
+function CB.ClearAllRoles()
+  CB.db.botRoles = {}
+  if CB.SetStatus then CB.SetStatus("cleared all roles") end
   CB.RefreshGroup()
 end
 
@@ -104,6 +132,9 @@ local CLASS_ICON_COORDS = {
   PRIEST  = { 0.5, 0.75, 0.25, 0.5 }, WARLOCK = { 0.75, 1.0, 0.25, 0.5 },
   PALADIN = { 0, 0.25, 0.5, 0.75 },  DEATHKNIGHT = { 0.25, 0.5, 0.5, 0.75 },
 }
+
+local GROUP_ROW_H = 18
+local GROUP_VISIBLE = 16
 
 local function DoAction(spec)
   if spec.kind == "mark" then CB.BotMark(spec.icon, spec.arg)
@@ -263,74 +294,69 @@ end
 -- Group tab refresh (filters + bot list + header)
 --------------------------------------------------------------------------------
 
+-- Virtual scrolling, matching the Available list's pattern: a fixed pool of
+-- GROUP_VISIBLE row buttons, repositioned/relabeled from FauxScrollFrame's offset.
 function CB.RefreshGroup()
   if not CB.win or not CB.win:IsShown() or CB.activeTab ~= "Group" then return end
   local units = BotUnits()
 
-  -- Party bot list: all bots, sorted by level.
   local i
   local list = {}
-  for i = 1, table.getn(units) do
-    table.insert(list, units[i])
-  end
+  for i = 1, table.getn(units) do table.insert(list, units[i]) end
   table.sort(list, function(a, b) return (UnitLevel(a) or 0) < (UnitLevel(b) or 0) end)
+  local num = table.getn(list)
 
-  for i = 1, table.getn(CB.botRows) do CB.botRows[i]:Hide() end
-  for i = 1, table.getn(list) do
-    local unit = list[i]
-    local _, cls = UnitClass(unit)
-    local row = CB.botRows[i]
-    if not row then
-      row = CreateFrame("Button", nil, CB.botPane)
-      row:SetWidth(172); row:SetHeight(18)
-      row.roleIcon = row:CreateTexture(nil, "OVERLAY")
-      row.roleIcon:SetWidth(12); row.roleIcon:SetHeight(12)
-      row.roleIcon:SetPoint("LEFT", row, "LEFT", 1, 0)
-      row.roleIcon:Hide()
-      row.lvl = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-      row.lvl:SetPoint("LEFT", row, "LEFT", 15, 0); row.lvl:SetWidth(22); row.lvl:SetJustifyH("LEFT")
-      row.classIcon = row:CreateTexture(nil, "OVERLAY")
-      row.classIcon:SetWidth(14); row.classIcon:SetHeight(14)
-      row.classIcon:SetPoint("LEFT", row, "LEFT", 40, 0)
-      row.classIcon:Hide()
-      row.txt = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-      row.txt:SetPoint("LEFT", row, "LEFT", 58, 0); row.txt:SetWidth(110); row.txt:SetJustifyH("LEFT")
-      row.hl = row:CreateTexture(nil, "BACKGROUND")
-      row.hl:SetAllPoints(row); row.hl:SetTexture(0.3, 0.5, 0.9, 0.3); row.hl:Hide()
-      row:SetScript("OnClick", function()
-        CB.selectedBotUnit = row.unit
-        CB.RefreshGroup()
-      end)
-      CB.botRows[i] = row
+  if CB.groupScroll then
+    FauxScrollFrame_Update(CB.groupScroll, num, GROUP_VISIBLE, GROUP_ROW_H)
+    local offset = FauxScrollFrame_GetOffset(CB.groupScroll)
+    for i = 1, GROUP_VISIBLE do
+      local row = CB.botRows[i]
+      local idx = i + offset
+      if idx <= num then
+        local unit = list[idx]
+        local _, cls = UnitClass(unit)
+        local name = UnitName(unit)
+        row.unit = unit
+        local r, g, b = ClassColor(cls)
+        row.lvl:SetText("|cffffd200" .. (UnitLevel(unit) or "?") .. "|r")
+        row.txt:SetText(name or "?")
+        row.txt:SetTextColor(r, g, b)
+        local role = name and CB.db.botRoles and CB.db.botRoles[name]
+        if role and ROLE_ICON[role] then
+          row.roleIcon:SetTexture(ROLE_ICON[role]); row.roleIcon:Show()
+        else
+          row.roleIcon:Hide()
+        end
+        local coords = cls and CLASS_ICON_COORDS[cls]
+        if coords then
+          row.classIcon:SetTexture(CLASS_ICON_TEX)
+          row.classIcon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+          row.classIcon:Show()
+        else
+          row.classIcon:Hide()
+        end
+        if name and CB.selectedBots[name] then row.hl:Show() else row.hl:Hide() end
+        row:Show()
+      else
+        row:Hide()
+      end
     end
-    row:ClearAllPoints()
-    row:SetPoint("TOPLEFT", CB.botPane, "TOPLEFT", 2, -20 - (i - 1) * 18)
-    row.unit = unit
-    local r, g, b = ClassColor(cls)
-    row.lvl:SetText("|cffffd200" .. (UnitLevel(unit) or "?") .. "|r")
-    row.txt:SetText(UnitName(unit) or "?")
-    row.txt:SetTextColor(r, g, b)
-    local role = CB.db.botRoles and CB.db.botRoles[UnitName(unit)]
-    if role and ROLE_ICON[role] then
-      row.roleIcon:SetTexture(ROLE_ICON[role]); row.roleIcon:Show()
-    else
-      row.roleIcon:Hide()
-    end
-    local coords = cls and CLASS_ICON_COORDS[cls]
-    if coords then
-      row.classIcon:SetTexture(CLASS_ICON_TEX)
-      row.classIcon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
-      row.classIcon:Show()
-    else
-      row.classIcon:Hide()
-    end
-    if CB.selectedBotUnit == unit then row.hl:Show() else row.hl:Hide() end
-    row:Show()
   end
 
-  CB.groupHeader:SetText("Managing: " .. table.getn(units) .. " bot" .. (table.getn(units) == 1 and "" or "s"))
-  local selName = CB.selectedBotUnit and UnitExists(CB.selectedBotUnit) and UnitName(CB.selectedBotUnit)
-  CB.groupSelected:SetText(selName and ("Selected: " .. selName) or "Selected: (none - click a bot)")
+  CB.groupHeader:SetText("Managing: " .. num .. " bot" .. (num == 1 and "" or "s"))
+
+  local selCount, selList = 0, {}
+  for nm in pairs(CB.selectedBots) do
+    selCount = selCount + 1
+    table.insert(selList, nm)
+  end
+  if selCount == 0 then
+    CB.groupSelected:SetText("Selected: (none - click a bot)")
+  elseif selCount <= 3 then
+    CB.groupSelected:SetText("Selected: " .. table.concat(selList, ", "))
+  else
+    CB.groupSelected:SetText("Selected: " .. selCount .. " bots")
+  end
 
   -- Show "Convert to Raid" once the party is full (5) and not yet a raid.
   if CB.convertBtn then
@@ -355,7 +381,7 @@ local function RoleDropInit()
     info.notCheckable = 1
     info.func = function()
       UIDropDownMenu_SetText(roleName, CB.roleDrop)  -- 1.12 order: (text, frame)
-      CB.SetBotRole(CB.selectedBotUnit, roleKey)
+      CB.ApplyRoleToSelected(roleKey)
     end
     UIDropDownMenu_AddButton(info)
   end
@@ -365,9 +391,18 @@ local function RoleDropInit()
   clr.notCheckable = 1
   clr.func = function()
     UIDropDownMenu_SetText("Set Role...", CB.roleDrop)
-    CB.ClearBotRole(CB.selectedBotUnit)
+    CB.ClearSelectedRoles()
   end
   UIDropDownMenu_AddButton(clr)
+
+  local clrAll = {}
+  clrAll.text = "Clear All"
+  clrAll.notCheckable = 1
+  clrAll.func = function()
+    UIDropDownMenu_SetText("Set Role...", CB.roleDrop)
+    CB.ClearAllRoles()
+  end
+  UIDropDownMenu_AddButton(clrAll)
 end
 
 local function BuildGroupBody(body)
@@ -464,7 +499,6 @@ local function BuildGroupBody(body)
   bp:SetPoint("TOPLEFT", body, "TOPLEFT", grx, -20)
   bp:SetBackdrop(BD); bp:SetBackdropColor(0, 0, 0, 0.4)
   CB.botPane = bp
-  CB.botRows = {}
 
   local hLvl = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   hLvl:SetPoint("TOPLEFT", bp, "TOPLEFT", 15, -4); hLvl:SetText("|cffffffffLvl|r")
@@ -472,6 +506,50 @@ local function BuildGroupBody(body)
   hClass:SetPoint("TOPLEFT", bp, "TOPLEFT", 38, -4); hClass:SetText("|cffffffffCls|r")
   local hName = bp:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   hName:SetPoint("TOPLEFT", bp, "TOPLEFT", 58, -4); hName:SetText("|cffffffffName|r")
+
+  local gscroll = CreateFrame("ScrollFrame", "CleanBotVGroupScroll", bp, "FauxScrollFrameTemplate")
+  gscroll:SetPoint("TOPLEFT", bp, "TOPLEFT", 2, -20)
+  gscroll:SetPoint("BOTTOMRIGHT", bp, "BOTTOMRIGHT", -24, 4)
+  gscroll:SetScript("OnVerticalScroll", function()
+    FauxScrollFrame_OnVerticalScroll(GROUP_ROW_H, function() CB.RefreshGroup() end)
+  end)
+  CB.groupScroll = gscroll
+
+  CB.botRows = {}
+  local line
+  for line = 1, GROUP_VISIBLE do
+    local row = CreateFrame("Button", nil, bp)
+    row:SetHeight(GROUP_ROW_H)
+    row:SetPoint("TOPLEFT", gscroll, "TOPLEFT", 0, -(line - 1) * GROUP_ROW_H)
+    row:SetPoint("RIGHT", gscroll, "RIGHT", 0, 0)
+    row.roleIcon = row:CreateTexture(nil, "OVERLAY")
+    row.roleIcon:SetWidth(12); row.roleIcon:SetHeight(12)
+    row.roleIcon:SetPoint("LEFT", row, "LEFT", 1, 0)
+    row.roleIcon:Hide()
+    row.lvl = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row.lvl:SetPoint("LEFT", row, "LEFT", 15, 0); row.lvl:SetWidth(22); row.lvl:SetJustifyH("LEFT")
+    row.classIcon = row:CreateTexture(nil, "OVERLAY")
+    row.classIcon:SetWidth(14); row.classIcon:SetHeight(14)
+    row.classIcon:SetPoint("LEFT", row, "LEFT", 40, 0)
+    row.classIcon:Hide()
+    row.txt = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row.txt:SetPoint("LEFT", row, "LEFT", 58, 0); row.txt:SetWidth(100); row.txt:SetJustifyH("LEFT")
+    row.hl = row:CreateTexture(nil, "BACKGROUND")
+    row.hl:SetAllPoints(row); row.hl:SetTexture(0.3, 0.5, 0.9, 0.3); row.hl:Hide()
+    row:SetScript("OnClick", function()
+      local name = row.unit and UnitName(row.unit)
+      if not name then return end
+      if IsShiftKeyDown() then
+        if CB.selectedBots[name] then CB.selectedBots[name] = nil else CB.selectedBots[name] = true end
+      else
+        CB.selectedBots = {}
+        CB.selectedBots[name] = true
+      end
+      CB.RefreshGroup()
+    end)
+    row:Hide()
+    CB.botRows[line] = row
+  end
 end
 
 local function BuildPlaceholder(body, text)
@@ -503,7 +581,7 @@ function CB.BuildGroup()  -- name kept for Core/minimap compatibility
 
   local title = w:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   title:SetPoint("TOP", w, "TOP", 0, -12)
-  title:SetText("CleanBot")
+  title:SetText("CleanBot Turtle")
 
   local close = CreateFrame("Button", nil, w, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", w, "TOPRIGHT", -4, -4)
@@ -555,7 +633,7 @@ function CB.BuildGroup()  -- name kept for Core/minimap compatibility
     if w.elapsed >= 0.5 then w.elapsed = 0; CB.RefreshGroup() end
   end)
 
-  CB.groupFilter = "All"
+  CB.selectedBots = {}
   CB.db.botRoles = CB.db.botRoles or {}
   CB.win = w
 end

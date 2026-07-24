@@ -6,7 +6,7 @@
 local CB = CleanBotV
 
 -- Friendly names for the Blizzard Key Bindings menu (built from CB.BAR).
-BINDING_HEADER_CLEANBOTV = "CleanBot"
+BINDING_HEADER_CLEANBOTV = "CleanBot Turtle"
 do
   local i
   for i = 1, table.getn(CB.BAR) do
@@ -79,7 +79,7 @@ function CB.BuildSettings()
 
   local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   title:SetPoint("TOP", f, "TOP", 0, -12)
-  title:SetText("CleanBot Settings")
+  title:SetText("CleanBot Turtle Settings")
 
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -3, -3)

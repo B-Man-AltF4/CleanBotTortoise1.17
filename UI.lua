@@ -52,7 +52,7 @@ local function CleanBotVMenuInit()
   local info
 
   info = {}
-  info.text = "CleanBot"; info.isTitle = 1; info.notCheckable = 1
+  info.text = "CleanBot Turtle"; info.isTitle = 1; info.notCheckable = 1
   UIDropDownMenu_AddButton(info)
 
   info = {}
@@ -109,7 +109,7 @@ local function BuildMinimapButton()
   end)
   b:SetScript("OnEnter", function()
     GameTooltip:SetOwner(this, "ANCHOR_LEFT")
-    GameTooltip:AddLine("CleanBot - Party Bots")
+    GameTooltip:AddLine("CleanBot Turtle - Party Bots")
     GameTooltip:AddLine("Click for menu", 1, 1, 1)
     GameTooltip:Show()
   end)
@@ -146,7 +146,7 @@ function CB.BuildUI()
 
   local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   title:SetPoint("TOP", f, "TOP", 0, -10)
-  title:SetText("CleanBot - Party Bots")
+  title:SetText("CleanBot Turtle - Party Bots")
 
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -2, -2)
